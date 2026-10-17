@@ -225,3 +225,34 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
 /* Pong */
 .pong{display:block;width:min(96vw,800px);aspect-ratio:5/3;margin:0 auto;border-radius:var(--r);border:2px solid var(--line);touch-action:none;cursor:ns-resize;background:var(--bg2)}
+
+/* Wordle (wyścig) */
+.wd{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:28px;align-items:start;justify-content:center}
+.wd-main{display:flex;flex-direction:column;align-items:center;gap:14px}
+.wd-grid{display:grid;gap:6px;width:min(86vw,330px)}
+.wd-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.wd-t{aspect-ratio:1;min-width:0;display:grid;place-items:center;background:var(--card);border:2px solid var(--line);border-radius:10px;font-size:clamp(1.4rem,7vw,2rem);font-weight:700;line-height:1}
+.wd-t.filled{border-color:var(--muted)}
+.wd-t.s2{background:var(--ok);border-color:var(--ok);color:#14132c}
+.wd-t.s1{background:var(--x);border-color:var(--x);color:#14132c}
+.wd-t.s0{background:#48448a;border-color:#48448a;color:var(--muted)}
+.wd-t.flip{animation:wdflip .5s ease both;animation-delay:calc(var(--i,0)*.12s)}
+@keyframes wdflip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+.wd-answer{width:min(86vw,330px);margin:0 auto}
+.wd-keys{display:grid;gap:6px;width:min(96vw,440px)}
+.wd-kr{display:flex;gap:5px;justify-content:center}
+.wd-k{flex:1;min-width:0;max-width:44px;height:48px;padding:0;font-size:1rem;background:var(--card2);box-shadow:0 3px 0 #1f1c42}
+.wd-k.wide{flex:1.7;max-width:70px;font-size:.85rem}
+.wd-k.k2{background:#2f7d55;box-shadow:0 3px 0 #1d5237}
+.wd-k.k1{background:#a8832f;box-shadow:0 3px 0 #6f5720}
+.wd-k.k0{background:#1f1c42;box-shadow:none;opacity:.55}
+.wd-k:disabled{cursor:default;transform:none}
+.wd-h{font-size:1.05rem;font-weight:600;margin:0 0 10px;color:var(--muted)}
+.wd-opps{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.wd-opp{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.wd-opp.win{border-color:var(--ok)}
+.wd-on{font-weight:600;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px}
+.wd-mini{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:0 auto 6px;max-width:120px}
+.wd-mini .wd-t{border-width:1px;border-radius:4px;font-size:.6rem}
+.wd-opp small{color:var(--muted);font-size:.8rem}
+@media (max-width:760px){.wd{grid-template-columns:1fr}}

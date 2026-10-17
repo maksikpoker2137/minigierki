@@ -11,3 +11,7 @@
 2. `public/games/nazwa.js` – wygląd: `Games.nazwa = { render(el, state, me, send) }`.
 3. W `server.js` dopisz grę do obiektu `games`, w `public/index.html` dodaj `<script>` z plikiem.
 Pokoje, nicki, kody, poczekalnia i wyniki działają dla wszystkich gier automatycznie.
+
+## Wordle (wyścig)
+Wszyscy w pokoju zgadują to samo 5-literowe słowo (6 prób, 5 rund). Kto pierwszy je odgadnie, wygrywa rundę i runda się kończy. Rywale widzą tylko kolory Twoich prób, nie litery.
+Lista haseł jest w `games/wordle.js`. Domyślnie wolno wpisać dowolne 5 liter; jeśli położysz obok plik `games/wordle-dict.txt` (jedno słowo na linię), próby spoza słownika będą odrzucane.
