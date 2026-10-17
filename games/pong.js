@@ -1,9 +1,9 @@
-// Pong dla 2 graczy, do 7 punktów. Gra na żywo: serwer symuluje piłkę i paletki (step() ~30x/s, patrz server.js).
+// Pong dla 2 graczy, do 3 punktów. Gra na żywo: serwer symuluje piłkę i paletki (step() ~30x/s, patrz server.js).
 // Gracz 0 = lewa paletka, gracz 1 = prawa. Klient wysyła tylko docelową pozycję paletki, a serwer przesuwa ją
 // z ograniczoną prędkością, więc nie da się "teleportować" paletki.
 const W = 1000, H = 600, PW = 14, PH = 110, MARGIN = 24, R = 9;
 const PADDLE_SPEED = 750, START_SPEED = 430, MAX_SPEED = 950, SPEEDUP = 1.06, MAX_ANGLE = 1.05;
-const WIN = 7, SERVE_MS = 1400;
+const WIN = 3, SERVE_MS = 1400;
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -19,7 +19,7 @@ function create(names, wins, round) {
 }
 
 module.exports = {
-  meta: { id: 'pong', name: 'Pong', icon: '🏓', desc: 'Klasyczny pojedynek paletek na żywo. Kto pierwszy do 7 punktów?', min: 2, max: 2 },
+  meta: { id: 'pong', name: 'Pong', icon: '🏓', desc: 'Klasyczny pojedynek paletek na żywo. Kto pierwszy do 3 punktów?', min: 2, max: 2 },
 
   init: players => create(players.map(p => p.name), players.map(() => 0), 0),
 

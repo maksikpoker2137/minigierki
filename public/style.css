@@ -256,3 +256,55 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .wd-mini .wd-t{border-width:1px;border-radius:4px;font-size:.6rem}
 .wd-opp small{color:var(--muted);font-size:.8rem}
 @media (max-width:760px){.wd{grid-template-columns:1fr}}
+
+/* UNO */
+:root{--cR:#e63946;--cY:#ffd166;--cG:#2fb36d;--cB:#3a86ff}
+.uc{--w:64px;width:var(--w);height:calc(var(--w)*1.5);padding:0;border-radius:12px;border:3px solid #fff;color:#fff;font-weight:700;font-size:1.5rem;line-height:1;display:grid;place-items:center;position:relative;box-shadow:0 3px 0 #0006;flex:none}
+.uc.R{background:var(--cR)} .uc.G{background:var(--cG)} .uc.B{background:var(--cB)}
+.uc.Y{background:var(--cY);color:#14132c}
+.uc.W{background:conic-gradient(var(--cR) 0 25%,var(--cY) 0 50%,var(--cG) 0 75%,var(--cB) 0);text-shadow:0 1px 3px #000c}
+.uc.back{background:#14132c;border-color:var(--accent);font-size:1rem;letter-spacing:.1em;color:var(--accent)}
+.uc.back small{position:absolute;bottom:4px;font-size:.7rem;letter-spacing:0;color:var(--muted)}
+.uc.mini{--w:46px;height:46px}
+button.uc:not(:disabled):hover{transform:translateY(-6px)}
+button.uc:disabled{cursor:default;transform:none}
+.uc.no{opacity:.4;filter:saturate(.5)}
+.uc.new{box-shadow:0 0 0 3px var(--o),0 3px 0 #0006}
+.uno-table{display:flex;gap:22px;align-items:center;justify-content:center;margin:8px 0 6px;--w:84px}
+.uno-table .uc{--w:84px;font-size:2rem}
+.uno-info{display:grid;gap:6px;justify-items:center;color:var(--muted)}
+.uno-dir{font-size:2rem;line-height:1;color:var(--text)}
+.uno-col{width:34px;height:34px;border-radius:50%;border:3px solid #fff}
+.uno-log{min-height:3.6em;text-align:center;color:var(--muted);font-size:.9rem;margin:6px 0}
+.uno-log p{margin:0}
+.uno-pick{max-width:420px;margin:0 auto 10px;text-align:center}
+.uno-hand{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:6px 0 14px}
+@media (max-width:560px){.uc{--w:54px;font-size:1.25rem}.uno-table .uc{--w:70px}.uno-table{gap:14px}}
+
+/* Szachy */
+.xb{display:grid;grid-template-columns:repeat(8,1fr);width:min(94vw,560px);margin:0 auto;border:4px solid var(--line);border-radius:14px;overflow:hidden}
+.xs{aspect-ratio:1;min-width:0;padding:0;border:0;border-radius:0;box-shadow:none;position:relative;display:grid;place-items:center;overflow:hidden}
+.xs.l{background:#d9d4f5} .xs.d{background:#4a4590}
+.xs:hover,.xs:active{transform:none;box-shadow:none}
+.xs:disabled{opacity:1;cursor:default}
+.xs:not(:disabled){cursor:pointer}
+.xs.last::before,.xs.sel::before,.xs.chk::before{content:'';position:absolute;inset:0}
+.xs.last::before{background:rgba(255,209,102,.5)}
+.xs.sel::before{background:rgba(76,201,240,.6)}
+.xs.chk::before{background:radial-gradient(circle,#ff5d8f 0 40%,transparent 75%)}
+.xs.dest::after{content:'';position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(126,224,161,.95);pointer-events:none}
+.xs.cap::after{content:'';position:absolute;inset:6%;border-radius:50%;border:5px solid rgba(126,224,161,.95);pointer-events:none}
+.xp{position:relative;z-index:1;font-size:clamp(1.9rem,9vw,3.4rem);line-height:1;font-family:'Segoe UI Symbol','Noto Sans Symbols 2','Apple Symbols',system-ui,sans-serif}
+.xp.w{color:#fff;text-shadow:-1px -1px 0 #14132c,1px -1px 0 #14132c,-1px 1px 0 #14132c,1px 1px 0 #14132c,0 2px 3px #0006}
+.xp.b{color:#1b1a3a;text-shadow:0 0 3px rgba(255,255,255,.6),0 1px 0 rgba(255,255,255,.35)}
+.xc{position:absolute;z-index:2;font-size:.6rem;font-weight:600;line-height:1;pointer-events:none}
+.xs.l .xc{color:#4a4590} .xs.d .xc{color:#d9d4f5}
+.xcap{display:flex;align-items:center;gap:10px;width:min(94vw,560px);margin:8px auto;min-height:2em}
+.xcol{color:var(--muted);font-size:.85rem}
+.xtake{display:flex;flex-wrap:wrap;margin-left:auto;gap:0;align-items:center}
+.xtake .xp{font-size:1.05rem;margin-left:-2px}
+.xcap small{color:var(--ok);font-weight:600}
+.xpromo{padding:6px 14px;background:var(--card2);box-shadow:0 3px 0 #1f1c42}
+.xpromo .xp{font-size:2.2rem}
+.xmoves{width:min(94vw,560px);margin:14px auto 0;max-height:96px;overflow-y:auto;background:var(--bg2);border:2px solid var(--line);border-radius:14px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.9rem}
+.xmoves i{color:var(--muted);font-style:normal}

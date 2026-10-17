@@ -1,31 +1,31 @@
-// Wyścig pisania dla 2–8 graczy. 3 rundy, w każdej wszyscy przepisują to samo zdanie.
+// Wyścig pisania dla 2–8 graczy. 3 rundy, w każdej wszyscy przepisują to samo angielskie zdanie (małe litery, bez interpunkcji).
 // Fazy: countdown (odliczanie, zdania jeszcze nie widać) -> race -> results -> (następna runda) -> over.
 // Serwer sam liczy postęp (długość poprawnego początku tekstu) i czas ukończenia – klient niczego nie "zgłasza".
 const SENTENCES = [
-  'Ala ma kota, a kot ma Alę i bardzo to lubi.',
-  'W czasie suszy sam diabeł pije wodę ze studni.',
-  'Szybka brązowa lisica przeskoczyła nad leniwym psem.',
-  'Kto rano wstaje, temu Pan Bóg daje, a kto śpi, ten czeka.',
-  'Dzisiaj pada deszcz, więc zostajemy w domu i gramy w gry.',
-  'Nie ma tego złego, co by na dobre nie wyszło.',
-  'Pociąg do Krakowa odjeżdża z trzeciego peronu o piętnastej.',
-  'Mały żółw powoli wspinał się na wielką górę piasku.',
-  'W ogrodzie babci rosną jabłka, gruszki, śliwki i maliny.',
-  'Wieczorem zjemy pizzę, a potem obejrzymy dobry film.',
-  'Każdy bohater był kiedyś zwykłym dzieckiem z wielkimi marzeniami.',
-  'Rowerem przez las można dojechać nad jezioro w godzinę.',
-  'Kot siedział na parapecie i obserwował spadające liście.',
-  'Najlepsza kawa to ta wypita w dobrym towarzystwie.',
-  'Kiedy świeci słońce, wszystko wygląda dużo lepiej.',
-  'Zimą ulice pokrywa śnieg, a dzieci lepią bałwana.',
-  'Dobry kucharz nigdy nie zdradza wszystkich swoich sekretów.',
-  'W niedzielę cała rodzina spotyka się przy wspólnym stole.',
-  'Statek wypłynął z portu o świcie i zniknął za horyzontem.',
-  'Gdy trwoga, to do Boga, a gdy dobrze, to do gry!',
-  'Codziennie rano biegam po parku, żeby mieć więcej energii.',
-  'Stary zegar na wieży wybił północ i wszystko ucichło.',
-  'Wiosną łąki pokrywają się tysiącami kolorowych kwiatów.',
-  'Pisanie na klawiaturze to świetny trening dla palców i głowy.'
+  'the quick brown fox jumps over the lazy dog',
+  'a journey of a thousand miles begins with a single step',
+  'all that glitters is not gold',
+  'practice makes perfect so keep typing every day',
+  'the early bird catches the worm',
+  'rain is falling outside so we are staying in to play games',
+  'she sells sea shells by the sea shore',
+  'better late than never but never late is better',
+  'a little patience goes a long way',
+  'every cloud has a silver lining',
+  'we will have pizza tonight and then watch a good movie',
+  'the train to london leaves from platform three at noon',
+  'a small turtle slowly climbed the big hill of sand',
+  'good friends are like stars you do not always see them but you know they are there',
+  'when the sun is shining everything looks much better',
+  'in winter the streets are covered with snow and kids build a snowman',
+  'the best coffee is the one you drink with good company',
+  'the old clock in the tower struck midnight and everything went quiet',
+  'spring fills the meadows with thousands of colorful flowers',
+  'typing fast is great exercise for your fingers and your brain',
+  'the ship left the harbor at dawn and vanished over the horizon',
+  'every hero was once an ordinary child with big dreams',
+  'you can ride a bike through the forest to the lake in an hour',
+  'the cat sat on the windowsill and watched the falling leaves'
 ];
 const ROUNDS = 3, COUNT_MS = 3500, RACE_MS = 60000, RESULT_MS = 8000;
 
@@ -58,7 +58,7 @@ function finish(s) {
 }
 
 module.exports = {
-  meta: { id: 'typing', name: 'Wyścig pisania', icon: '⌨️', desc: 'Kto pierwszy przepisze zdanie bez błędów? Trzy rundy, punkty za miejsce.', min: 2, max: 8 },
+  meta: { id: 'typing', name: 'Wyścig pisania', icon: '⌨️', desc: 'Kto pierwszy przepisze angielskie zdanie bez błędów? Trzy rundy, punkty za miejsce.', min: 2, max: 8 },
 
   init: players => create(players.map(p => p.name), players.map(() => 0), 0),
 
