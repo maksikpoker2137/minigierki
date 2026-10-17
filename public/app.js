@@ -58,7 +58,7 @@ async function home() {
   document.getElementById('create').onclick = () => send('create', { name: getNick(), gameId: picked });
   const join = () => send('join', { name: getNick(), code: document.getElementById('code').value });
   document.getElementById('join').onclick = join;
-  document.getElementById('code').onkeydown = e => e.key === 'Enter' && join();
+  document.getElementById('code').onkeydown = e => { if (e.key === 'Enter') join(); };
 }
 
 function lobby(r) {

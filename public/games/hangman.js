@@ -56,7 +56,7 @@ Games.hangman = {
 
     el.querySelectorAll('.key').forEach(b => b.onclick = () => send('move', { type: 'guess', letter: b.dataset.k }));
     const w = el.querySelector('#w');
-    if (w) { w.focus(); const cat = el.querySelector('#cat'); const go = () => send('move', { type: 'setWord', word: w.value, category: cat.value }); el.querySelector('#set').onclick = go; w.onkeydown = cat.onkeydown = e => e.key === 'Enter' && go(); el.querySelector('#rnd').onclick = () => send('move', { type: 'random' }); }
+    if (w) { w.focus(); const cat = el.querySelector('#cat'); const go = () => send('move', { type: 'setWord', word: w.value, category: cat.value }); el.querySelector('#set').onclick = go; w.onkeydown = cat.onkeydown = e => { if (e.key === 'Enter') go(); }; el.querySelector('#rnd').onclick = () => send('move', { type: 'random' }); }
     const again = el.querySelector('#again'); if (again) again.onclick = () => send('rematch');
     el.querySelector('#leave').onclick = () => send('leave');
   }

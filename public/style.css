@@ -120,3 +120,27 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .pc{width:78%;height:78%;border-radius:50%;display:grid;place-items:center;font-size:clamp(1rem,5vw,1.8rem);color:#1b1a3a;box-shadow:inset 0 -4px 0 #0003,0 2px 0 #0004}
 .pc.p0{background:var(--x)} .pc.p1{background:var(--o)}
 .pc.ghost{opacity:.35}
+
+/* Państwa-miasta */
+.pm-top{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+.pm-top .status{flex:1;text-align:left;margin:0}
+.pm-letter{flex:none;width:84px;height:84px;border-radius:22px;background:var(--accent);color:#fff;font-size:3.2rem;font-weight:700;display:grid;place-items:center;box-shadow:0 6px 0 #b83b64}
+.pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.pm-field input.bad{border-color:var(--accent)}
+.pm-field input:disabled{opacity:.6}
+.pm-help{font-size:.95rem;margin:18px 0 0;max-width:none}
+.pm-wrap{overflow-x:auto;background:var(--card);border:2px solid var(--line);border-radius:var(--r)}
+.pm-tbl{border-collapse:collapse;width:100%;min-width:420px}
+.pm-tbl th,.pm-tbl td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.pm-tbl thead th{color:var(--muted);font-weight:500;font-size:.9rem}
+.pm-tbl tbody th{color:var(--muted);font-weight:500;font-size:.9rem;white-space:nowrap}
+.pm-tbl td .a{display:block;font-weight:600;word-break:break-word}
+.pm-tbl td .p{font-size:.8rem;color:var(--muted)}
+.pm-tbl td.solo .a,.pm-tbl td.solo .p{color:var(--ok)}
+.pm-tbl td.dup .a,.pm-tbl td.dup .p{color:var(--x)}
+.pm-tbl td.bad .a,.pm-tbl td.rejected .a{color:var(--accent);text-decoration:line-through}
+.pm-tbl td.empty .a{color:var(--muted);font-weight:400}
+.pm-tbl tr.sum td,.pm-tbl tr.sum th{border-bottom:0;font-weight:700;font-size:1.15rem;color:var(--text);padding-top:12px}
+.fl{margin-top:6px;padding:2px 10px;border-radius:10px;font-size:.8rem;background:var(--card2);box-shadow:none;opacity:.7}
+.fl.on{background:var(--accent);opacity:1}
+@media (max-width:560px){.pm-letter{width:64px;height:64px;font-size:2.4rem}.pm-top .status{font-size:1.05rem}}

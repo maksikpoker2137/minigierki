@@ -55,7 +55,7 @@ function build(el, s, me, send) {
   }
   const gs = el.querySelector('#gs');
   const go = () => { if (gs.value.trim() && !gs.disabled) { send('move', { type: 'guess', text: gs.value }); gs.value = ''; } };
-  el.querySelector('#go').onclick = go; gs.onkeydown = e => e.key === 'Enter' && go();
+  el.querySelector('#go').onclick = go; gs.onkeydown = e => { if (e.key === 'Enter') go(); };
   el.querySelector('#leave').onclick = () => send('leave');
   timer = setInterval(() => {
     const t = document.getElementById('tm'); if (!t) return clearInterval(timer);
