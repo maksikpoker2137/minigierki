@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 // ➜ Nowa gra = nowy plik w /games + jedna linijka tutaj.
-const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman'), charades: require('./games/charades'), checkers: require('./games/checkers'), panstwa: require('./games/panstwa') };
+const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman'), charades: require('./games/charades'), checkers: require('./games/checkers'), panstwa: require('./games/panstwa'), battleship: require('./games/battleship'), memory: require('./games/memory') };
 
 const app = express();
 const server = http.createServer(app);
