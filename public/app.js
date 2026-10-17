@@ -93,6 +93,7 @@ socket.on('room', r => {
   if (!box) { app.innerHTML = '<div id="game"></div>'; box = document.getElementById('game'); }
   Games[r.gameId].render(box, r.state, me, (ev, d) => { if (ev === 'leave') { socket.emit('leave'); room = null; home(); } else send(ev, d); });
 });
+socket.on('relay', d => { if (room && Games[room.gameId] && Games[room.gameId].onRelay) Games[room.gameId].onRelay(d); });
 socket.on('disconnect', () => toast('Utracono połączenie…'));
 
 home();

@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 // ➜ Nowa gra = nowy plik w /games + jedna linijka tutaj.
-const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman') };
+const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman'), charades: require('./games/charades'), checkers: require('./games/checkers') };
 
 const app = express();
 const server = http.createServer(app);
@@ -31,7 +31,17 @@ const publicRoom = (r, id) => ({
   players: r.players.map(p => ({ id: p.id, name: p.name })),
   min: games[r.gameId].meta.min, max: games[r.gameId].meta.max
 });
-const push = r => r.players.forEach(p => io.to(p.id).emit('room', publicRoom(r, p.id)));
+// gry z czasomierzem (state.endsAt) dostają wywołanie tick() po upływie czasu
+const schedule = r => {
+  clearTimeout(r.timer);
+  const g = games[r.gameId];
+  if (!r.state || !r.state.endsAt || !g.tick) return;
+  r.timer = setTimeout(() => {
+    if (!rooms.has(r.code) || !r.state) return;
+    r.state = g.tick(r.state); push(r);
+  }, Math.max(0, r.state.endsAt - Date.now()) + 50);
+};
+const push = r => { r.players.forEach(p => io.to(p.id).emit('room', publicRoom(r, p.id))); schedule(r); };
 
 io.on('connection', socket => {
   const myRoom = () => rooms.get(socket.data.code);
@@ -71,6 +81,15 @@ io.on('connection', socket => {
     r.state = res; push(r);
   });
 
+  // szybki kanał dla gier (np. rysunek w kalamburach) – bez zapisu w stanie
+  socket.on('relay', d => {
+    const r = myRoom(); if (!r || !r.state) return;
+    const g = games[r.gameId];
+    if (!g.canRelay || !g.canRelay(r.state, r.players.findIndex(p => p.id === socket.id))) return;
+    if (JSON.stringify(d || null).length > 300) return;
+    socket.to(r.code).emit('relay', d);
+  });
+
   socket.on('rematch', () => {
     const r = myRoom(); if (!r || !r.state) return;
     const g = games[r.gameId];
@@ -82,7 +101,7 @@ io.on('connection', socket => {
     const idx = r.players.findIndex(p => p.id === socket.id);
     r.players = r.players.filter(p => p.id !== socket.id);
     socket.leave(r.code); socket.data.code = null;
-    if (!r.players.length) return rooms.delete(r.code);
+    if (!r.players.length) { clearTimeout(r.timer); return rooms.delete(r.code); }
     if (r.hostId === socket.id) r.hostId = r.players[0].id;
     if (r.state) { // ktoś wyszedł w trakcie gry
       const g = games[r.gameId];
