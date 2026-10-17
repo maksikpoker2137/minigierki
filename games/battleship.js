@@ -79,6 +79,18 @@ module.exports = {
   // Co widzi dany gracz: swoją flotę w całości, a z floty przeciwnika
   // tylko zatopione statki (całą dopiero po końcu partii).
   view(s, me) {
+    if (me < 0) { // widz: tylko to, co publiczne (strzały, zatopione statki, a po partii całe floty)
+      const board = i => {
+        const target = s.fleets[1 - i], cells = new Set((target || []).flat());
+        return {
+          shots: s.shots[i].map(c => ({ c, hit: cells.has(c) })),
+          sunk: (target || []).filter(f => f.every(c => s.shots[i].includes(c))),
+          fleet: s.phase === 'over' ? target : null
+        };
+      };
+      return { spectator: true, names: s.names, scores: s.scores, round: s.round, phase: s.phase, turn: s.turn,
+        winner: s.winner, ready: s.ready, last: s.last, boards: [board(0), board(1)] };
+    }
     const opp = 1 - me, oppFleet = s.fleets[opp], mine = s.shots[me];
     const oppCells = new Set((oppFleet || []).flat());
     return {

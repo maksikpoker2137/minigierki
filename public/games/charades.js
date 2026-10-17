@@ -1,6 +1,7 @@
 (function () {
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const COLORS = ['#1b1a3a', '#e63946', '#f4a261', '#ffd166', '#2a9d8f', '#4cc9f0', '#7b5cff', '#ff5d8f'];
+const COLORS = ['#1b1a3a', '#6b7280', '#b8bcc8', '#8b5a2b', '#e63946', '#ff5d8f', '#f4a261', '#ffd166',
+  '#ffe14d', '#a7e22e', '#2dc653', '#2a9d8f', '#4cc9f0', '#3a86ff', '#7b5cff', '#c77dff'];
 const pen = { c: COLORS[0], w: 6, eraser: false };
 let cur = null, deadline = 0, timer = null;
 
@@ -76,8 +77,8 @@ function update(el, s, me) {
   log.innerHTML = s.chat.map(m => m.name ? `<p><b>${esc(m.name)}:</b> ${esc(m.text)}</p>` : `<p class="sys">${esc(m.text)}</p>`).join('');
   log.scrollTop = log.scrollHeight;
   const gs = el.querySelector('#gs');
-  gs.disabled = el.querySelector('#go').disabled = drawer || solved || s.phase !== 'draw';
-  gs.placeholder = drawer ? 'Ty rysujesz' : solved ? 'Odgadnięte!' : 'Wpisz odpowiedź…';
+  gs.disabled = el.querySelector('#go').disabled = me < 0 || drawer || solved || s.phase !== 'draw';
+  gs.placeholder = me < 0 ? 'Oglądasz' : drawer ? 'Ty rysujesz' : solved ? 'Odgadnięte!' : 'Wpisz odpowiedź…';
 }
 
 window.Games = window.Games || {};

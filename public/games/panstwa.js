@@ -11,7 +11,7 @@ const chips = (s, mark) => s.names.map((n, i) => `<div class="chip" style="color
   <b>${s.scores[i]}</b><span>${esc(n)}${i === me ? ' (ty)' : ''}${mark(i)}</span></div>`).join('');
 
 function collect(el) { return [...el.querySelectorAll('.pm-field input')].map(i => i.value); }
-function sendDraft(el) { if (cur && cur.phase === 'play' && !cur.done[me]) send('move', { type: 'draft', answers: collect(el) }); }
+function sendDraft(el) { if (me >= 0 && cur && cur.phase === 'play' && !cur.done[me]) send('move', { type: 'draft', answers: collect(el) }); }
 
 function startTimer() {
   clearInterval(timer);
@@ -20,7 +20,7 @@ function startTimer() {
     const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
     t.textContent = cur.phase === 'over' ? '' : left + ' s';
     // czas minął: wyślij ostatnie wpisane słowa od razu, bez czekania na pauzę w pisaniu
-    if (left === 0 && cur.phase === 'play' && !cur.done[me] && !sentFinal) {
+    if (left === 0 && me >= 0 && cur.phase === 'play' && !cur.done[me] && !sentFinal) {
       sentFinal = true; clearTimeout(draftTimer); sendDraft(document.getElementById('game'));
     }
   }, 250);

@@ -9,7 +9,7 @@ if (typeof io === 'undefined') {
 }
 const socket = io();
 const who = document.getElementById('who');
-let catalog = [], picked = null, room = null;
+let catalog = [], picked = null, room = null, roomsList = [];
 let nick = localStorage.getItem('nick') || '';
 
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -51,6 +51,10 @@ async function home() {
         <button class="ghost" id="join" type="button">Dołącz</button>
       </div>
     </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>Otwarte pokoje</h2>
+      <p class="lead" style="margin:4px 0 14px">Dołącz do pokoju, który czeka na graczy, albo oglądaj trwającą grę.</p>
+      <div id="rooms"></div>
     </div>`;
   app.querySelectorAll('.game[data-id]').forEach(b => b.onclick = () => { picked = b.dataset.id; app.querySelectorAll('.game[data-id]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   const fromLink = new URLSearchParams(location.search).get('kod');
@@ -59,9 +63,37 @@ async function home() {
   const join = () => send('join', { name: getNick(), code: document.getElementById('code').value });
   document.getElementById('join').onclick = join;
   document.getElementById('code').onkeydown = e => { if (e.key === 'Enter') join(); };
+  renderRooms();
+}
+
+// lista pokoi w menu: czekające (Dołącz) i trwające (Oglądaj)
+function renderRooms() {
+  const box = document.getElementById('rooms'); if (!box || !catalog.length) return;
+  const list = [...roomsList].sort((a, b) => a.started - b.started || a.code.localeCompare(b.code));
+  if (!list.length) { box.innerHTML = '<p class="lead rooms-empty">Na razie nikt nie gra. Utwórz pierwszy pokój!</p>'; return; }
+  box.innerHTML = '<ul class="rooms">' + list.map(r => {
+    const g = catalog.find(x => x.id === r.gameId) || { icon: '🎮', name: r.gameId };
+    const canJoin = !r.started && !r.full;
+    const status = r.started ? 'Gra trwa' : r.full ? 'Pokój pełny' : 'Czeka na graczy';
+    const btn = canJoin ? `<button data-join="${r.code}">Dołącz</button>`
+      : r.started ? `<button class="ghost" data-watch="${r.code}">👁 Oglądaj</button>` : '<button class="ghost" disabled>Pełny</button>';
+    return `<li class="rm"><span class="ic">${g.icon}</span>
+      <div class="info"><b>${esc(g.name)}</b> <span class="rm-code">${esc(r.code)}</span>
+        <small>${r.players.map(esc).join(', ')} · ${r.players.length}/${r.max} graczy${r.watchers ? ' · 👁 ' + r.watchers : ''}</small></div>
+      <span class="rm-st ${r.started ? 'live' : ''}">${status}</span>${btn}</li>`;
+  }).join('') + '</ul>';
+  box.querySelectorAll('[data-join]').forEach(b => b.onclick = () => send('join', { name: getNick(), code: b.dataset.join }));
+  box.querySelectorAll('[data-watch]').forEach(b => b.onclick = () => send('watch', { name: getNick(), code: b.dataset.watch }));
 }
 
 function lobby(r) {
+  if (r.spectating) {
+    app.innerHTML = `<div class="panel" style="text-align:center;max-width:520px;margin:20px auto">
+      <h2>Gra się zakończyła</h2><p class="lead" style="margin:6px auto 14px">Gracze wrócili do poczekalni (pokój ${r.code}). Zostajesz widzem, gdy ruszą ponownie.</p>
+      <div class="actions"><button class="ghost" id="leave">Wyjdź</button></div></div>`;
+    document.getElementById('leave').onclick = () => { socket.emit('leave'); room = null; home(); };
+    return;
+  }
   const isHost = r.hostId === socket.id;
   const g = catalog.find(x => x.id === r.gameId);
   const enough = r.players.length >= r.min;
@@ -86,13 +118,18 @@ function lobby(r) {
 
 socket.on('room', r => {
   room = r;
-  who.textContent = `${nick} · pokój ${r.code}`;
+  who.textContent = r.spectating ? `${nick || 'Widz'} · oglądasz ${r.code}` : `${nick} · pokój ${r.code}`;
   if (!r.state) return lobby(r);
   const me = r.players.findIndex(p => p.id === socket.id);
   let box = document.getElementById('game');
-  if (!box) { app.innerHTML = '<div id="game"></div>'; box = document.getElementById('game'); }
+  if (!box) { app.innerHTML = '<div id="watch" class="watch"></div><div id="game"></div>'; box = document.getElementById('game'); }
   Games[r.gameId].render(box, r.state, me, (ev, d) => { if (ev === 'leave') { socket.emit('leave'); room = null; home(); } else send(ev, d); });
+  const banner = document.getElementById('watch');
+  if (banner) banner.innerHTML = r.spectating ? `👁 Oglądasz grę · widzów: ${r.watchers}` : (r.watchers ? `👁 Widzów: ${r.watchers}` : '');
+  if (r.spectating) box.querySelectorAll('button,input,textarea,select').forEach(x => { if (x.id !== 'leave') x.disabled = true; }); // widz tylko patrzy
 });
+socket.on('rooms', list => { roomsList = list; renderRooms(); });
+socket.on('closed', () => { room = null; toast('Pokój został zamknięty'); home(); });
 socket.on('relay', d => { if (room && Games[room.gameId] && Games[room.gameId].onRelay) Games[room.gameId].onRelay(d); });
 socket.on('disconnect', () => toast('Utracono połączenie…'));
 

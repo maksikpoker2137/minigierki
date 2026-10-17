@@ -1,14 +1,14 @@
-// Memory dla 2–4 graczy. Ilość kart zależy od liczby graczy (16 / 20 / 24, zawsze 4 kolumny).
+// Memory dla 2–4 graczy. Ilość kart zależy od liczby graczy (24 / 30 / 36, zawsze 6 kolumn).
 // Trafiona para = punkt i kolejny ruch. Pudło: obie karty widać chwilę (endsAt), potem tick() odwraca je
 // i oddaje kolej. Symbole zakrytych kart zna tylko serwer – view wysyła je dopiero po odkryciu.
-const SYMBOLS = ['🐶','🐱','🦊','🐼','🐸','🦁','🐙','🦄','🍕','🍩','🚀','⚽','🎲','🌵','🍉','🎸'];
-const COLS = 4, SHOW_MS = 1600;
-const CARDS = { 2: 16, 3: 20, 4: 24 };
+const SYMBOLS = ['🐶','🐱','🦊','🐼','🐸','🦁','🐙','🦄','🍕','🍩','🚀','⚽','🎲','🌵','🍉','🎸','🐵','🦉','🐢','🦋','🍔','🍓','🎈','🎯','⭐','🌈'];
+const COLS = 6, SHOW_MS = 1600;
+const CARDS = { 2: 24, 3: 30, 4: 36 };
 
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 function create(names, wins, round) {
-  const n = CARDS[names.length] || 16;
+  const n = CARDS[names.length] || 24;
   const pick = shuffle([...SYMBOLS]).slice(0, n / 2);
   return {
     names, wins, round, phase: 'play', turn: round % names.length,

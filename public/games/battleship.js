@@ -66,11 +66,34 @@ function lastMsg(s, me) {
   return `${l.by === me ? 'Ty' : esc(s.names[l.by])}: ${pos(l.cell)} – ${l.sunk ? 'zatopiony!' : l.hit ? 'trafiony!' : 'pudło'}`;
 }
 
+// widok widza: obie plansze strzałów, bez statków przed końcem partii
+function spectate(el, s, send) {
+  const chips = [0, 1].map(i => `<div class="chip ${s.phase === 'play' && s.turn === i ? 'turn' : ''}" style="color:var(--${i ? 'o' : 'x'})">
+    <b>${s.scores[i]}</b><span>${esc(s.names[i])}</span></div>`).join('');
+  const status = s.phase === 'setup' ? 'Gracze rozstawiają floty…'
+    : s.phase === 'over' ? `${esc(s.names[s.winner])} zatopił całą flotę!` : `Strzela ${esc(s.names[s.turn])}…`;
+  const side = i => {
+    const b = s.boards[i], sm = new Map(b.shots.map(x => [x.c, x.hit])), sunk = new Set(b.sunk.flat()), reveal = new Set((b.fleet || []).flat());
+    const g = grid(c => {
+      const shot = sm.has(c), hit = sm.get(c);
+      const cls = ['bs-c', shot ? (hit ? (sunk.has(c) ? 'sunk' : 'hit') : 'miss') : (reveal.has(c) ? 'reveal' : ''), s.last && s.last.by === i && s.last.cell === c ? 'last' : ''].join(' ');
+      return `<span class="${cls}">${shot ? (hit ? '✕' : '•') : ''}</span>`;
+    }, 'bs-mine');
+    return `<div class="bs-side"><h3>Strzały: ${esc(s.names[i])}</h3>${g}</div>`;
+  };
+  el.innerHTML = `<div class="bar"><div class="score">${chips}</div></div>
+    <div class="status" aria-live="polite">${status}</div>
+    ${s.phase === 'setup' ? '' : `<div class="bs-wrap">${side(0)}${side(1)}</div>`}
+    <div class="actions"><button class="ghost" id="leave">Wyjdź</button></div>`;
+  el.querySelector('#leave').onclick = () => send('leave');
+}
+
 window.Games = window.Games || {};
 Games.battleship = {
   icon: '🚢',
   render(el, s, me, send) {
     ctx = { el, s, me, send };
+    if (s.spectator) return spectate(el, s, send);
     const opp = 1 - me, over = s.phase === 'over';
     if (s.phase === 'setup') { if (!draft || draft.round !== s.round) draft = freshDraft(s.round); } else draft = null;
     const setting = s.phase === 'setup' && !s.mine;
