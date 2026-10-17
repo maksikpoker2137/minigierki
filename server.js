@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 // ➜ Nowa gra = nowy plik w /games + jedna linijka tutaj.
-const games = { tictactoe: require('./games/tictactoe') };
+const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman') };
 
 const app = express();
 const server = http.createServer(app);
@@ -20,12 +20,18 @@ const makeCode = () => {
 };
 const clean = s => String(s || '').trim().slice(0, 16);
 
-const publicRoom = r => ({
-  code: r.code, gameId: r.gameId, hostId: r.hostId, state: r.state,
+// każdy gracz dostaje własny "widok" stanu (np. bez ukrytego hasła)
+const viewFor = (r, id) => {
+  if (!r.state) return null;
+  const g = games[r.gameId];
+  return g.view ? g.view(r.state, r.players.findIndex(p => p.id === id)) : r.state;
+};
+const publicRoom = (r, id) => ({
+  code: r.code, gameId: r.gameId, hostId: r.hostId, state: viewFor(r, id),
   players: r.players.map(p => ({ id: p.id, name: p.name })),
   min: games[r.gameId].meta.min, max: games[r.gameId].meta.max
 });
-const push = r => io.to(r.code).emit('room', publicRoom(r));
+const push = r => r.players.forEach(p => io.to(p.id).emit('room', publicRoom(r, p.id)));
 
 io.on('connection', socket => {
   const myRoom = () => rooms.get(socket.data.code);
@@ -73,11 +79,15 @@ io.on('connection', socket => {
 
   const leave = () => {
     const r = myRoom(); if (!r) return;
+    const idx = r.players.findIndex(p => p.id === socket.id);
     r.players = r.players.filter(p => p.id !== socket.id);
     socket.leave(r.code); socket.data.code = null;
     if (!r.players.length) return rooms.delete(r.code);
     if (r.hostId === socket.id) r.hostId = r.players[0].id;
-    if (r.state) r.state = null; // ktoś wyszedł – wracamy do poczekalni
+    if (r.state) { // ktoś wyszedł w trakcie gry
+      const g = games[r.gameId];
+      r.state = g.onLeave ? g.onLeave(r.state, idx) : null; // brak obsługi albo za mało graczy = poczekalnia
+    }
     push(r);
   };
   socket.on('leave', leave);
