@@ -1,6 +1,8 @@
 // Państwa-miasta dla 2–8 graczy. Wszyscy wpisują słowa na wylosowaną literę, potem razem sprawdzają odpowiedzi.
 // Odpowiedzi innych graczy są ukryte do końca rundy (patrz view).
-const CATS = ['Państwo', 'Miasto', 'Imię', 'Zwierzę', 'Roślina', 'Rzecz'];
+// Domyślne kategorie. Gospodarz może je zmienić w ekranie przygotowania (faza 'setup') przed pierwszą rundą.
+const DEFAULT_CATS = ['Państwo', 'Miasto', 'Imię', 'Zwierzę', 'Rzecz'];
+const MAX_CATS = 12, MAX_CAT_LEN = 24;
 const LETTERS = 'ABCDEFGHIJKLMNOPRSTUWZ'.split('');
 const ROUNDS = 5;
 const PLAY_MS = 90000;   // czas rundy
@@ -18,7 +20,7 @@ function startRound(s) {
   s.letter = free[Math.floor(Math.random() * free.length)];
   s.used.push(s.letter);
   s.phase = 'play';
-  s.answers = s.names.map(() => CATS.map(() => ''));
+  s.answers = s.names.map(() => s.cats.map(() => ''));
   s.done = s.names.map(() => false);
   s.stoppedBy = null; s.flags = []; s.ready = [];
   s.deadline = Date.now() + PLAY_MS; s.endsAt = s.deadline + GRACE_MS;
@@ -30,7 +32,7 @@ function toReview(s) {
 }
 function calc(s) {
   const n = s.names.length;
-  const cells = CATS.map((_, c) => {
+  const cells = s.cats.map((_, c) => {
     const row = s.names.map((_, p) => {
       const a = s.answers[p][c], k = norm(a);
       const flags = s.flags.filter(f => f.cat === c && f.target === p).length;
@@ -55,10 +57,12 @@ function advance(s) {
   s.round++;
   return startRound(s);
 }
-function create(names) {
-  return startRound({ names, scores: names.map(() => 0), round: 0, used: [] });
+// najpierw ekran przygotowania: gospodarz (gracz nr 0) ustawia kategorie i dopiero potem startuje pierwsza runda
+function create(names, cats) {
+  return { names, scores: names.map(() => 0), round: 0, used: [], phase: 'setup', cats: [...(cats || DEFAULT_CATS)] };
 }
-const cleanAnswers = a => Array.isArray(a) && a.length === CATS.length
+const cleanCat = t => String(t == null ? '' : t).replace(/\s+/g, ' ').trim().slice(0, MAX_CAT_LEN);
+const cleanAnswers = (a, n) => Array.isArray(a) && a.length === n
   ? a.map(x => String(x == null ? '' : x).trim().replace(/\s+/g, ' ').slice(0, 30)) : null;
 
 module.exports = {
@@ -67,11 +71,29 @@ module.exports = {
   init: players => create(players.map(p => p.name)),
 
   move(s, me, d) {
+    if (s.phase === 'setup') {
+      if (me !== 0) return { error: 'Kategorie ustawia gospodarz.' };
+      if (d.type === 'addcat') {
+        const name = cleanCat(d.name);
+        if (name.length < 2) return { error: 'Nazwa kategorii jest za krótka.' };
+        if (s.cats.length >= MAX_CATS) return { error: `Maksymalnie ${MAX_CATS} kategorii.` };
+        if (s.cats.some(c => c.toLocaleLowerCase('pl') === name.toLocaleLowerCase('pl'))) return { error: 'Taka kategoria już jest.' };
+        s.cats.push(name); return s;
+      }
+      if (d.type === 'delcat') {
+        if (!Number.isInteger(d.i) || d.i < 0 || d.i >= s.cats.length) return { error: 'Nie ma takiej kategorii.' };
+        if (s.cats.length <= 1) return { error: 'Musi zostać przynajmniej jedna kategoria.' };
+        s.cats.splice(d.i, 1); return s;
+      }
+      if (d.type === 'begin') return startRound(s);
+      return { error: 'Najpierw trzeba zacząć grę.' };
+    }
+    if (d.type === 'addcat' || d.type === 'delcat' || d.type === 'begin') return { error: 'Kategorie można zmieniać tylko przed grą.' };
     if (d.type === 'draft' || d.type === 'stop') {
       if (s.phase !== 'play') return d.type === 'draft' ? s : { error: 'Runda się skończyła.' };
       if (Date.now() > s.endsAt) return d.type === 'draft' ? s : { error: 'Czas minął.' };
       if (s.done[me]) return d.type === 'draft' ? s : { error: 'Już skończyłeś tę rundę.' };
-      const a = cleanAnswers(d.answers);
+      const a = cleanAnswers(d.answers, s.cats.length);
       if (!a) return d.type === 'draft' ? s : { error: 'Nieprawidłowe odpowiedzi.' };
       if (d.type === 'draft') { s.answers[me] = a; return s; }
       // pierwszy, kto kończy, musi mieć komplet. Reszta może skończyć z tym, co ma.
@@ -86,7 +108,7 @@ module.exports = {
     if (d.type === 'flag') {
       if (s.phase !== 'review') return { error: 'Teraz nie można odrzucać odpowiedzi.' };
       const { cat, target } = d;
-      if (!Number.isInteger(cat) || cat < 0 || cat >= CATS.length || !Number.isInteger(target) || target < 0 || target >= s.names.length)
+      if (!Number.isInteger(cat) || cat < 0 || cat >= s.cats.length || !Number.isInteger(target) || target < 0 || target >= s.names.length)
         return { error: 'Nieznana odpowiedź.' };
       if (target === me) return { error: 'Własnej odpowiedzi nie odrzucisz.' };
       if (!s.answers[target][cat]) return { error: 'Tu nie ma odpowiedzi.' };
@@ -106,7 +128,7 @@ module.exports = {
 
   // co widzi dany gracz: w trakcie rundy tylko własne odpowiedzi
   view(s, me) {
-    const out = { ...s, cats: CATS, rounds: ROUNDS, used: undefined, answers: undefined, flags: undefined, deadline: undefined };
+    const out = { ...s, rounds: ROUNDS, used: undefined, answers: undefined, flags: undefined, deadline: undefined };
     out.msLeft = s.endsAt ? Math.max(0, (s.phase === 'play' ? s.deadline : s.endsAt) - Date.now()) : 0;
     if (s.phase === 'play') out.mine = s.answers[me];
     if (s.phase === 'review' || s.phase === 'over') {
@@ -118,12 +140,14 @@ module.exports = {
     return out;
   },
 
-  rematch: s => (s.phase === 'over' ? create(s.names) : s),
+  rematch: s => (s.phase === 'over' ? create(s.names, s.cats) : s),
 
   // ktoś wyszedł (serwer już usunął go z listy graczy)
   onLeave(s, idx) {
-    s.names.splice(idx, 1); s.scores.splice(idx, 1); s.answers.splice(idx, 1); s.done.splice(idx, 1);
+    s.names.splice(idx, 1); s.scores.splice(idx, 1);
     const n = s.names.length; if (n < 2) return null;
+    if (s.phase === 'setup') return s; // gospodarzem zostaje kolejny gracz (serwer przesuwa go na pozycję 0)
+    s.answers.splice(idx, 1); s.done.splice(idx, 1);
     const re = i => (i > idx ? i - 1 : i);
     s.flags = s.flags.filter(f => f.target !== idx && f.voter !== idx).map(f => ({ ...f, target: re(f.target), voter: re(f.voter) }));
     s.ready = s.ready.filter(i => i !== idx).map(re);

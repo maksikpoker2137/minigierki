@@ -93,6 +93,30 @@ function buildReview(el, s) {
   el.querySelector('#leave').onclick = () => send('leave');
 }
 
+function setupList(el, s) {
+  const host = me === 0;
+  el.querySelector('#cl').innerHTML = s.cats.map((c, i) => `<li class="pm-cat"><span>${esc(c)}</span>${host ? `<button class="pm-x" data-i="${i}" aria-label="Usuń kategorię ${esc(c)}" title="Usuń"${s.cats.length <= 1 ? ' disabled' : ''}>✕</button>` : ''}</li>`).join('');
+  el.querySelectorAll('.pm-x').forEach(b => b.onclick = () => send('move', { type: 'delcat', i: +b.dataset.i }));
+  el.querySelector('#cnt').textContent = `${s.cats.length}/12`;
+}
+
+function buildSetup(el, s) {
+  const host = me === 0;
+  el.innerHTML = `<div class="panel pm-setup"><h2>Kategorie</h2>
+    <p class="lead" style="margin:6px 0 14px">${host ? 'Jesteś gospodarzem: dodaj własne kategorie albo usuń te, których nie chcesz.' : 'Gospodarz ustawia kategorie…'}</p>
+    <ul class="pm-cats" id="cl"></ul><p class="pm-help" style="margin:8px 0 0"><span id="cnt"></span> kategorii</p>
+    ${host ? `<div class="row" style="flex-wrap:nowrap;margin-top:14px"><input id="nc" maxlength="24" autocomplete="off" placeholder="Nowa kategoria, np. Zawód"><button id="add">Dodaj</button></div>` : ''}
+    <div class="actions">${host ? '<button id="begin">Zaczynamy grę</button>' : ''}<button class="ghost" id="leave">Wyjdź</button></div></div>`;
+  if (host) {
+    const nc = el.querySelector('#nc');
+    const add = () => { const v = nc.value.trim(); if (v) { send('move', { type: 'addcat', name: v }); nc.value = ''; nc.focus(); } };
+    el.querySelector('#add').onclick = add;
+    nc.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); add(); } };
+    el.querySelector('#begin').onclick = () => send('move', { type: 'begin' });
+  }
+  el.querySelector('#leave').onclick = () => send('leave');
+}
+
 function buildOver(el, s) {
   const rank = s.names.map((n, i) => ({ n, p: s.scores[i], me: i === me })).sort((a, b) => b.p - a.p);
   el.innerHTML = `<div class="panel" style="max-width:480px;margin:10px auto;text-align:center"><h2>Koniec gry</h2>
@@ -106,6 +130,12 @@ window.Games = window.Games || {};
 Games.panstwa = {
   render(el, s, who, sendFn) {
     cur = s; me = who; send = sendFn;
+    if (s.phase === 'setup') {
+      clearInterval(timer);
+      if (el.dataset.key !== 'setup') { el.dataset.key = 'setup'; buildSetup(el, s); }
+      setupList(el, s);
+      return;
+    }
     if (s.phase === 'play') {
       const key = 'p' + s.round; // pola budujemy raz na rundę, żeby nie tracić wpisywanego tekstu
       if (el.dataset.key !== key) { el.dataset.key = key; buildPlay(el, s); }

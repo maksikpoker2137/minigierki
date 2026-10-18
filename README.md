@@ -22,3 +22,10 @@ Przy 1–2 kartach trzeba nacisnąć **UNO!** – kto zostanie z jedną kartą b
 
 ## Szachy
 Dwóch graczy, pełne zasady: roszada, bicie w przelocie, promocja (wybierasz figurę), szach, mat, pat, remis przez trzykrotne powtórzenie, 50 ruchów i za mało materiału. Można zaproponować remis (drugi gracz przyjmuje lub odrzuca) i poddać partię. Ruch: kliknij swoją figurę, potem pole docelowe. Zapis partii jest w notacji polskiej (S skoczek, G goniec, W wieża, H hetman, K król). Kolory zamieniają się w każdej kolejnej partii. Zegara nie ma.
+
+## Arena Lawy
+Strzelanka z widokiem z góry dla 2–4 graczy, gra na żywo (serwer liczy całą fizykę, tak jak w Pongu). Wygrywa ten, kto pierwszy zdobędzie 5 fragmentów.
+Na mapie są dwa jeziora lawy – lawa parzy (32 obr./s), ale **kamienie** na niej są bezpieczne, a **unik** (spacja / prawy przycisk myszy, odnawia się co ~2 s) pozwala przeskoczyć kawałek lawy bez obrażeń. Głazy na lądzie blokują ruch i pociski.
+Bronie leżą na mapie i pojawiają się co kilka sekund: pistolet (start, nieskończona amunicja), pistolet maszynowy, strzelba, snajperka (widoczny laser!) i wyrzutnia rakiet (obszar rażenia + odrzut, który może wrzucić w lawę). Są też apteczki (+40 HP), tarcze (+50) i przyspieszenie. Zabity gracz upuszcza broń i wraca po 3 s z chwilową nietykalnością. Kto wpadnie w lawę zaraz po postrzeleniu, zalicza fragment strzelcowi.
+Sterowanie: WASD / strzałki – ruch, myszka – celowanie, lewy przycisk – strzał, spacja lub prawy przycisk – unik. Na telefonie: lewy kciuk steruje ruchem, prawy celuje i strzela, przycisk „Unik” pod planszą.
+Stałe do dostrojenia (obrażenia, tempo strzałów, ilość amunicji, czas respawnu) są na początku `games/arena.js`, a kształt mapy w `public/games/arena-map.js` (ten plik czyta i serwer, i przeglądarka).

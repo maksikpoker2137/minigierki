@@ -88,7 +88,7 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
 /* Kalambury */
 .cl{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
-.cl canvas{width:100%;aspect-ratio:800/560;background:#fff;border-radius:18px;border:3px solid var(--line);touch-action:none;cursor:crosshair;display:block}
+.cl canvas{width:100%;aspect-ratio:1400/900;background:#fff;border-radius:18px;border:3px solid var(--line);touch-action:none;cursor:crosshair;display:block}
 .cl-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .cl-timer{font-size:1.6rem;font-weight:700;color:var(--x);min-width:60px;text-align:right}
 .hint{font-size:1.6rem;letter-spacing:.3em;white-space:pre-wrap;overflow-wrap:anywhere;font-weight:700}
@@ -98,10 +98,15 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .colors{display:flex;flex-wrap:wrap;gap:6px;max-width:100%}
 .sw{width:30px;height:30px;padding:0;border-radius:50%;border:3px solid var(--line);box-shadow:none}
 .sw.on{border-color:#fff}
+.rgb{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;width:100%}
+.rgb input[type=color]{width:44px;height:36px;padding:0;border:3px solid var(--line);border-radius:10px;background:none;cursor:pointer}
+.rgb label{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.9rem}
+.rgb input[type=range]{width:120px;padding:0}
+.rgb output{min-width:2.2ch;text-align:right;color:var(--muted);font-weight:400}
 .tl{padding:8px 14px;font-size:.9rem}
 .tl.on{background:var(--o);color:#14132c;box-shadow:0 4px 0 #2a8fb0}
 .chat{background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px}
-.chat .log{height:300px;overflow-y:auto;font-size:.95rem}
+.chat .log{height:460px;overflow-y:auto;font-size:.95rem}
 .chat .log p{margin:0 0 6px;word-break:break-word}
 .chat .sys{color:var(--ok)}
 .chat input{min-width:0}
@@ -129,6 +134,10 @@ button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 .pm-field input.bad{border-color:var(--accent)}
 .pm-field input:disabled{opacity:.6}
+.pm-setup{max-width:520px;margin:10px auto}
+.pm-cats{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+.pm-cat{display:flex;align-items:center;gap:8px;background:var(--bg2);border:2px solid var(--line);border-radius:999px;padding:6px 8px 6px 16px;font-weight:600}
+.pm-x{width:26px;height:26px;padding:0;border-radius:50%;font-size:.8rem;line-height:1;box-shadow:none}
 .pm-help{font-size:.95rem;margin:18px 0 0;max-width:none}
 .pm-wrap{overflow-x:auto;background:var(--card);border:2px solid var(--line);border-radius:var(--r)}
 .pm-tbl{border-collapse:collapse;width:100%;min-width:420px}
@@ -308,3 +317,8 @@ button.uc:disabled{cursor:default;transform:none}
 .xpromo .xp{font-size:2.2rem}
 .xmoves{width:min(94vw,560px);margin:14px auto 0;max-height:96px;overflow-y:auto;background:var(--bg2);border:2px solid var(--line);border-radius:14px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.9rem}
 .xmoves i{color:var(--muted);font-style:normal}
+
+/* Arena Lawy */
+.arena{width:100%;display:block;border-radius:18px;border:3px solid var(--line);background:#5a2a1a;touch-action:none;cursor:crosshair;image-rendering:pixelated;user-select:none;-webkit-user-select:none}
+main:has(.arena){max-width:1320px}
+main:has(.cl){max-width:1500px}

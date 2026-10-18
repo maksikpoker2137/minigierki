@@ -7,7 +7,7 @@ let cur = null, deadline = 0, timer = null;
 
 function seg(ctx, d) {
   const W = ctx.canvas.width, H = ctx.canvas.height;
-  ctx.strokeStyle = d.c; ctx.lineWidth = d.w; ctx.lineCap = 'round';
+  ctx.strokeStyle = d.c; ctx.lineWidth = d.w * W / 800; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(d.a[0] * W, d.a[1] * H); ctx.lineTo(d.a[2] * W, d.a[3] * H); ctx.stroke();
 }
 const wipe = ctx => { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height); };
@@ -27,8 +27,12 @@ function build(el, s, me, send) {
   el.innerHTML = `<div class="bar"><div class="score" id="sc"></div></div>
     <div class="cl-top"><div class="status" id="st" style="margin:0;text-align:left" aria-live="polite"></div><div class="cl-timer" id="tm"></div></div>
     <div class="cl"><div>
-      <canvas id="cv" width="800" height="560" aria-label="Tablica do rysowania"></canvas>
+      <canvas id="cv" width="1400" height="900" aria-label="Tablica do rysowania"></canvas>
       ${drawer ? `<div class="tools"><div class="colors">${COLORS.map((c, i) => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="Kolor ${i + 1}"></button>`).join('')}</div>
+        <div class="rgb"><input type="color" id="cp" value="#1b1a3a" aria-label="Wybierz kolor">
+          <label>R<input type="range" id="cr" min="0" max="255" value="27"><output id="vr">27</output></label>
+          <label>G<input type="range" id="cg" min="0" max="255" value="26"><output id="vg">26</output></label>
+          <label>B<input type="range" id="cb" min="0" max="255" value="58"><output id="vb">58</output></label></div>
         <button class="ghost tl" data-w="3">Cienki</button><button class="ghost tl" data-w="7">Średni</button><button class="ghost tl" data-w="16">Gruby</button>
         <button class="ghost tl" id="er">Gumka</button><button class="ghost tl" id="clr">Wyczyść</button></div>` : ''}
     </div>
@@ -48,10 +52,20 @@ function build(el, s, me, send) {
       el.querySelectorAll('[data-w]').forEach(b => b.classList.toggle('on', +b.dataset.w === pen.w));
       el.querySelector('#er').classList.toggle('on', pen.eraser);
     };
-    el.querySelectorAll('.sw').forEach(b => b.onclick = () => { pen.c = b.dataset.c; pen.eraser = false; mark(); });
     el.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { pen.w = +b.dataset.w; mark(); });
     el.querySelector('#er').onclick = () => { pen.eraser = !pen.eraser; mark(); };
     el.querySelector('#clr').onclick = () => { wipe(ctx); send('relay', { t: 'x' }); };
+    const hex = n => n.toString(16).padStart(2, '0');
+    const cp = el.querySelector('#cp'), sl = ['r', 'g', 'b'].map(k => el.querySelector('#c' + k));
+    const syncRgb = () => {
+      const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(pen.c); if (!m) return;
+      cp.value = pen.c; sl.forEach((r, i) => { r.value = parseInt(m[i + 1], 16); el.querySelector('#v' + 'rgb'[i]).textContent = r.value; });
+    };
+    const setColor = c => { pen.c = c.toLowerCase(); pen.eraser = false; mark(); syncRgb(); };
+    cp.oninput = () => setColor(cp.value);
+    sl.forEach(r => r.oninput = () => setColor('#' + sl.map(x => hex(+x.value)).join('')));
+    el.querySelectorAll('.sw').forEach(b => b.onclick = () => setColor(b.dataset.c));
+    syncRgb();
     mark();
   }
   const gs = el.querySelector('#gs');
