@@ -96,7 +96,13 @@ function lobby(r) {
   }
   const isHost = r.hostId === socket.id;
   const g = catalog.find(x => x.id === r.gameId);
-  const enough = r.players.length >= r.min;
+  const enough = r.players.length >= r.min && !r.startError;
+  const opts = g.options || [];
+  const optLabel = (o, v) => (o.values.find(x => x[0] === v) || [v, v])[1];
+  const optsHtml = !opts.length ? '' : isHost
+    ? `<div class="opts">${opts.map(o => `<div class="opt"><span class="opt-l">${o.label}</span><div class="opt-b">${o.values.map(([v, n]) =>
+        `<button type="button" class="ghost tl${(r.options || {})[o.id] === v ? ' on' : ''}" data-opt="${o.id}" data-v="${v}">${n}</button>`).join('')}</div></div>`).join('')}</div>`
+    : `<ul class="opts-ro">${opts.map(o => `<li><span>${o.label}</span><b>${optLabel(o, (r.options || {})[o.id])}</b></li>`).join('')}</ul>`;
   app.innerHTML = `
     <div class="panel" style="text-align:center;max-width:520px;margin:20px auto">
       <p style="color:var(--muted)">${g.icon} ${g.name} · kod pokoju</p>
@@ -106,12 +112,15 @@ function lobby(r) {
       <ul class="players" style="text-align:left">
         ${r.players.map(p => `<li><span class="dot"></span>${esc(p.name)}${p.id === socket.id ? ' (ty)' : ''}<span class="tag">${p.id === r.hostId ? 'gospodarz' : ''}</span></li>`).join('')}
       </ul>
+      ${optsHtml}
+      ${r.startError ? `<p class="lead" style="margin:0 0 10px;color:var(--warn,#ffd166)">${esc(r.startError)}</p>` : ''}
       <div class="actions">
-        ${isHost ? `<button id="start" ${enough ? '' : 'disabled'}>${enough ? 'Zaczynamy' : `Czekamy na graczy (${r.players.length}/${r.min})`}</button>` : '<p class="lead" style="margin:0">Czekamy aż gospodarz zacznie grę…</p>'}
+        ${isHost ? `<button id="start" ${enough ? '' : 'disabled'}>${enough ? 'Zaczynamy' : r.startError ? 'Zmień opcje lub poczekaj na graczy' : `Czekamy na graczy (${r.players.length}/${r.min})`}</button>` : '<p class="lead" style="margin:0">Czekamy aż gospodarz zacznie grę…</p>'}
         <button class="ghost" id="leave">Wyjdź</button>
       </div>
     </div>`;
   document.getElementById('copy').onclick = () => { const url = `${location.origin}/?kod=${r.code}`; (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('Link skopiowany'), () => prompt('Skopiuj link:', url)); };
+  app.querySelectorAll('[data-opt]').forEach(b => b.onclick = () => socket.emit('setopt', { id: b.dataset.opt, value: b.dataset.v }));
   const st = document.getElementById('start'); if (st) st.onclick = () => send('start');
   document.getElementById('leave').onclick = () => { socket.emit('leave'); room = null; home(); };
 }

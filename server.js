@@ -19,6 +19,8 @@ const makeCode = () => {
   return c;
 };
 const clean = s => String(s || '').trim().slice(0, 16);
+// opcje pokoju (mapa, tryb…) – gra opisuje je w meta.options, domyślne wartości trafiają do pokoju
+const defaultOptions = g => Object.fromEntries((g.meta.options || []).map(o => [o.id, o.def]));
 
 // każdy gracz dostaje własny "widok" stanu (np. bez ukrytego hasła)
 const viewFor = (r, id) => {
@@ -28,6 +30,7 @@ const viewFor = (r, id) => {
 };
 const publicRoom = (r, id) => ({
   code: r.code, gameId: r.gameId, hostId: r.hostId, state: viewFor(r, id),
+  options: r.options, startError: games[r.gameId].canStart ? games[r.gameId].canStart(r.players, r.options) : null,
   players: r.players.map(p => ({ id: p.id, name: p.name })),
   spectating: !r.players.some(p => p.id === id), watchers: r.spectators.length,
   min: games[r.gameId].meta.min, max: games[r.gameId].meta.max
@@ -77,7 +80,7 @@ io.on('connection', socket => {
   socket.on('create', ({ name, gameId }, cb) => {
     name = clean(name);
     if (!name || !games[gameId]) return cb({ error: 'Wpisz nick i wybierz grę.' });
-    const room = { code: makeCode(), gameId, players: [{ id: socket.id, name }], spectators: [], hostId: socket.id, state: null };
+    const room = { code: makeCode(), gameId, players: [{ id: socket.id, name }], spectators: [], hostId: socket.id, state: null, options: defaultOptions(games[gameId]) };
     rooms.set(room.code, room);
     socket.join(room.code); socket.data.code = room.code;
     cb({ ok: true }); push(room);
@@ -106,10 +109,21 @@ io.on('connection', socket => {
     cb({ ok: true }); push(room);
   });
 
-  socket.on('start', () => {
+  // gospodarz zmienia opcje pokoju w poczekalni (tylko wartości z listy gry)
+  socket.on('setopt', ({ id, value } = {}) => {
     const r = myRoom(); if (!r || r.hostId !== socket.id || r.state) return;
-    if (r.players.length < games[r.gameId].meta.min) return;
-    r.state = games[r.gameId].init(r.players); push(r);
+    const o = (games[r.gameId].meta.options || []).find(x => x.id === id);
+    if (!o || !o.values.some(v => v[0] === value)) return;
+    r.options[id] = value; push(r);
+  });
+
+  socket.on('start', (_, cb) => {
+    const r = myRoom(); if (!r || r.hostId !== socket.id || r.state) return;
+    const g = games[r.gameId];
+    if (r.players.length < g.meta.min) return;
+    const err = g.canStart && g.canStart(r.players, r.options);
+    if (err) return cb && cb({ error: err });
+    r.state = g.init(r.players, r.options); push(r);
   });
 
   socket.on('move', (data, cb) => {
