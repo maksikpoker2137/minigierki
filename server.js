@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { Server } = require('socket.io');
 
 // ➜ Nowa gra = nowy plik w /games + jedna linijka tutaj.
@@ -11,6 +13,32 @@ const io = new Server(server);
 app.use(express.static('public'));
 app.get('/api/games', (_, res) => res.json(Object.values(games).map(g => g.meta)));
 
+// ---- ranking zwycięstw (zapisywany w data/wins.json, klucz = nick bez względu na wielkość liter) ----
+const WINS_FILE = path.join(__dirname, 'data', 'wins.json');
+let wins = {};
+try { wins = JSON.parse(fs.readFileSync(WINS_FILE, 'utf8')) || {}; } catch (e) { wins = {}; }
+let saveT = null;
+const saveWins = () => { // zapis z opóźnieniem, żeby nie męczyć dysku po każdej wygranej
+  clearTimeout(saveT);
+  saveT = setTimeout(() => { try { fs.mkdirSync(path.dirname(WINS_FILE), { recursive: true }); fs.writeFileSync(WINS_FILE, JSON.stringify(wins)); } catch (e) { console.error('Nie zapisano rankingu:', e.message); } }, 1500);
+};
+const board = () => Object.values(wins).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name)).slice(0, 10).map(w => ({ name: w.name, total: w.total }));
+const recordWin = (name, n) => {
+  const k = name.toLowerCase(); if (!wins[k]) wins[k] = { name, total: 0 };
+  wins[k].total += n; saveWins(); io.emit('board', board());
+};
+// wykrywa nowe zwycięstwa: gry z tablicą wins (Arena, Pong, Pamięć…) po wzroście licznika, pozostałe po ustawieniu state.winner
+const trackWins = r => {
+  const s = r.state;
+  if (!s) { r.prevWins = null; r.won = false; return; }
+  if (Array.isArray(s.wins)) {
+    if (r.prevWins && r.prevWins.length === s.wins.length) s.wins.forEach((w, i) => { if (w > r.prevWins[i] && r.players[i]) recordWin(r.players[i].name, w - r.prevWins[i]); });
+    r.prevWins = s.wins.slice();
+  } else if (Number.isInteger(s.winner) && s.winner >= 0 && s.winner < r.players.length) {
+    if (!r.won) { r.won = true; recordWin(r.players[s.winner].name, 1); }
+  } else r.won = false;
+};
+
 const rooms = new Map(); // kod -> { code, gameId, players:[{id,name}], spectators:[{id,name}], hostId, state }
 
 const makeCode = () => {
@@ -19,8 +47,6 @@ const makeCode = () => {
   return c;
 };
 const clean = s => String(s || '').trim().slice(0, 16);
-// opcje pokoju (mapa, tryb…) – gra opisuje je w meta.options, domyślne wartości trafiają do pokoju
-const defaultOptions = g => Object.fromEntries((g.meta.options || []).map(o => [o.id, o.def]));
 
 // każdy gracz dostaje własny "widok" stanu (np. bez ukrytego hasła)
 const viewFor = (r, id) => {
@@ -30,7 +56,6 @@ const viewFor = (r, id) => {
 };
 const publicRoom = (r, id) => ({
   code: r.code, gameId: r.gameId, hostId: r.hostId, state: viewFor(r, id),
-  options: r.options, startError: games[r.gameId].canStart ? games[r.gameId].canStart(r.players, r.options) : null,
   players: r.players.map(p => ({ id: p.id, name: p.name })),
   spectating: !r.players.some(p => p.id === id), watchers: r.spectators.length,
   min: games[r.gameId].meta.min, max: games[r.gameId].meta.max
@@ -68,19 +93,19 @@ const ensureLoop = r => {
   r.loop = setInterval(() => {
     const now = Date.now(), dt = Math.min((now - r.last) / 1000, 0.1); r.last = now;
     if (!rooms.has(r.code) || !r.state) { clearInterval(r.loop); r.loop = null; return; }
-    if (g.step(r.state, dt)) emitRoom(r);
+    if (g.step(r.state, dt)) { emitRoom(r); trackWins(r); }
   }, 33);
 };
-const push = r => { emitRoom(r); schedule(r); ensureLoop(r); broadcastRooms(); };
+const push = r => { trackWins(r); emitRoom(r); schedule(r); ensureLoop(r); broadcastRooms(); };
 
 io.on('connection', socket => {
-  socket.emit('rooms', roomList());
+  socket.emit('rooms', roomList()); socket.emit('board', board());
   const myRoom = () => rooms.get(socket.data.code);
 
   socket.on('create', ({ name, gameId }, cb) => {
     name = clean(name);
     if (!name || !games[gameId]) return cb({ error: 'Wpisz nick i wybierz grę.' });
-    const room = { code: makeCode(), gameId, players: [{ id: socket.id, name }], spectators: [], hostId: socket.id, state: null, options: defaultOptions(games[gameId]) };
+    const room = { code: makeCode(), gameId, players: [{ id: socket.id, name }], spectators: [], hostId: socket.id, state: null };
     rooms.set(room.code, room);
     socket.join(room.code); socket.data.code = room.code;
     cb({ ok: true }); push(room);
@@ -109,21 +134,10 @@ io.on('connection', socket => {
     cb({ ok: true }); push(room);
   });
 
-  // gospodarz zmienia opcje pokoju w poczekalni (tylko wartości z listy gry)
-  socket.on('setopt', ({ id, value } = {}) => {
+  socket.on('start', () => {
     const r = myRoom(); if (!r || r.hostId !== socket.id || r.state) return;
-    const o = (games[r.gameId].meta.options || []).find(x => x.id === id);
-    if (!o || !o.values.some(v => v[0] === value)) return;
-    r.options[id] = value; push(r);
-  });
-
-  socket.on('start', (_, cb) => {
-    const r = myRoom(); if (!r || r.hostId !== socket.id || r.state) return;
-    const g = games[r.gameId];
-    if (r.players.length < g.meta.min) return;
-    const err = g.canStart && g.canStart(r.players, r.options);
-    if (err) return cb && cb({ error: err });
-    r.state = g.init(r.players, r.options); push(r);
+    if (r.players.length < games[r.gameId].meta.min) return;
+    r.state = games[r.gameId].init(r.players); push(r);
   });
 
   socket.on('move', (data, cb) => {
