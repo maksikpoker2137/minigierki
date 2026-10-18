@@ -16,6 +16,66 @@ const keys = {}; const mouse = { x: W / 2, y: H / 2 };
 let firing = false, dashQ = false, aimA = 0, lastKey = '', sentAt = 0;
 const touches = new Map(); // aktywne palce: { kind: 'move' | 'aim', ox, oy, cx, cy }
 
+// ---------- własny celownik (ustawienia zapamiętane w przeglądarce) ----------
+const XH_KEY = 'arena.celownik';
+const XH_DEF = { on: true, style: 'cross', color: '#ffffff', size: 16, thick: 2, gap: 5, outline: true };
+const XH_STYLES = [['cross', 'Krzyż'], ['plus', 'Krzyż + kropka'], ['dot', 'Kropka'], ['ring', 'Okrąg'], ['ringdot', 'Okrąg + kropka'], ['corners', 'Narożniki']];
+const num = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d);
+function loadXh() {
+  let o = {};
+  try { o = JSON.parse(localStorage.getItem(XH_KEY)) || {}; } catch (e) { /* brak dostępu do pamięci – zostają domyślne */ }
+  return {
+    on: o.on !== false, style: XH_STYLES.some(x => x[0] === o.style) ? o.style : XH_DEF.style,
+    color: /^#[0-9a-f]{6}$/i.test(o.color) ? o.color : XH_DEF.color,
+    size: num(o.size, 6, 56, XH_DEF.size), thick: num(o.thick, 1, 8, XH_DEF.thick), gap: num(o.gap, 0, 24, XH_DEF.gap), outline: o.outline !== false
+  };
+}
+const xh = loadXh();
+const saveXh = () => { try { localStorage.setItem(XH_KEY, JSON.stringify(xh)); } catch (e) { /* trudno */ } };
+
+// k = ile pikseli planszy przypada na 1 piksel ekranu, dzięki temu celownik ma ten sam rozmiar przy każdym powiększeniu
+function drawXhair(g, x, y, c, k) {
+  const sz = c.size * k, t = c.thick * k, gp = c.gap * k, dr = Math.max(t * 0.9, 1.5 * k);
+  const pass = (col, ex, cap) => {
+    g.strokeStyle = g.fillStyle = col; g.lineWidth = t + ex; g.lineCap = cap; g.lineJoin = 'miter';
+    const arms = () => { g.beginPath(); g.moveTo(x - sz, y); g.lineTo(x - gp, y); g.moveTo(x + gp, y); g.lineTo(x + sz, y); g.moveTo(x, y - sz); g.lineTo(x, y - gp); g.moveTo(x, y + gp); g.lineTo(x, y + sz); g.stroke(); };
+    const dot = () => { g.beginPath(); g.arc(x, y, dr + ex / 2, 0, 7); g.fill(); };
+    const ring = () => { g.beginPath(); g.arc(x, y, sz, 0, 7); g.stroke(); };
+    if (c.style === 'cross') arms();
+    else if (c.style === 'plus') { arms(); dot(); }
+    else if (c.style === 'dot') dot();
+    else if (c.style === 'ring') ring();
+    else if (c.style === 'ringdot') { ring(); dot(); }
+    else if (c.style === 'corners') {
+      const a = sz, b = Math.max(gp, sz * 0.45); g.beginPath();
+      [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([sx, sy]) => { g.moveTo(x + sx * a, y + sy * b); g.lineTo(x + sx * a, y + sy * a); g.lineTo(x + sx * b, y + sy * a); });
+      g.stroke();
+    }
+  };
+  g.save();
+  if (c.outline) pass('rgba(10,8,30,.85)', 3 * k, 'square');
+  pass(c.color, 0, 'butt');
+  g.restore();
+}
+
+// Celownik jako prawdziwy kursor systemowy (obrazek): zero opóźnienia i zwykły kursor znika.
+function xhCursor() {
+  const half = Math.ceil(xh.size + xh.thick / 2 + 4), n = half * 2, c = document.createElement('canvas');
+  c.width = c.height = n; drawXhair(c.getContext('2d'), half, half, xh, 1);
+  return `url(${c.toDataURL('image/png')}) ${half} ${half}, crosshair`;
+}
+
+// ---------- pełny ekran (dla całego bloku gry, więc trzyma się też między rundami) ----------
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+const fsOk = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+function toggleFs(el) {
+  if (fsEl()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  const r = el.requestFullscreen || el.webkitRequestFullscreen; if (r) { const p = r.call(el); if (p && p.catch) p.catch(() => {}); }
+}
+function syncFs() { const b = document.getElementById('fs'); if (b) b.textContent = fsEl() ? '✕ Wyjdź z pełnego ekranu' : '⛶ Pełny ekran'; }
+document.addEventListener('fullscreenchange', syncFs);
+document.addEventListener('webkitfullscreenchange', syncFs);
+
 function stop() { cancelAnimationFrame(raf); raf = 0; if (off) { off(); off = null; } }
 
 // ---------- tło: ziemia, lawa, kamienie, głazy (rysowane raz do bufora) ----------
@@ -300,6 +360,37 @@ function frame() {
   raf = requestAnimationFrame(frame);
 }
 
+function xhPanel() {
+  return `<details class="xh"><summary>🎯 Celownik</summary><div class="xh-body">
+    <label class="xh-row"><input type="checkbox" id="xh-on" ${xh.on ? 'checked' : ''}> Własny celownik</label>
+    <div class="xh-styles">${XH_STYLES.map(([id, n]) => `<button type="button" class="ghost tl" data-st="${id}">${n}</button>`).join('')}</div>
+    <label class="xh-row">Kolor <input type="color" id="xh-c" value="${xh.color}"></label>
+    <label class="xh-row">Rozmiar <input type="range" id="xh-s" min="6" max="56" value="${xh.size}"><output id="xh-sv">${xh.size}</output></label>
+    <label class="xh-row">Grubość <input type="range" id="xh-t" min="1" max="8" value="${xh.thick}"><output id="xh-tv">${xh.thick}</output></label>
+    <label class="xh-row">Przerwa <input type="range" id="xh-g" min="0" max="24" value="${xh.gap}"><output id="xh-gv">${xh.gap}</output></label>
+    <label class="xh-row"><input type="checkbox" id="xh-o" ${xh.outline ? 'checked' : ''}> Ciemny obrys</label>
+    <canvas id="xh-pv" width="150" height="150" aria-label="Podgląd celownika"></canvas></div></details>`;
+}
+function bindXh(el, cv, over) {
+  const pv = el.querySelector('#xh-pv'), pg = pv.getContext('2d');
+  const refresh = () => {
+    pg.fillStyle = '#7b3d28'; pg.fillRect(0, 0, 150, 150); pg.fillStyle = '#f7870c'; pg.fillRect(75, 0, 75, 150);
+    drawXhair(pg, 75, 75, xh, 1);
+    el.querySelectorAll('[data-st]').forEach(b => b.classList.toggle('on', b.dataset.st === xh.style));
+    cv.style.cursor = xh.on && !over ? xhCursor() : '';
+    el.querySelector('#xh-sv').textContent = xh.size; el.querySelector('#xh-tv').textContent = xh.thick; el.querySelector('#xh-gv').textContent = xh.gap;
+  };
+  const set = (k, v) => { xh[k] = v; saveXh(); refresh(); };
+  el.querySelector('#xh-on').onchange = e => set('on', e.target.checked);
+  el.querySelector('#xh-o').onchange = e => set('outline', e.target.checked);
+  el.querySelector('#xh-c').oninput = e => set('color', e.target.value);
+  el.querySelector('#xh-s').oninput = e => set('size', +e.target.value);
+  el.querySelector('#xh-t').oninput = e => set('thick', +e.target.value);
+  el.querySelector('#xh-g').oninput = e => set('gap', +e.target.value);
+  el.querySelectorAll('[data-st]').forEach(b => b.onclick = () => set('style', b.dataset.st));
+  refresh();
+}
+
 function build(el, s) {
   stop();
   const over = s.phase === 'over';
@@ -307,8 +398,12 @@ function build(el, s) {
     <div class="status" id="st" aria-live="polite"></div>
     <canvas id="arena" class="arena" width="${W}" height="${H}" aria-label="Plansza Areny Lawy"></canvas>
     <p class="lead pong-help" id="hp" style="text-align:center;margin:10px auto 0;font-size:.9rem;max-width:none"></p>
-    <div class="actions">${over ? '<button id="again">Jeszcze raz</button>' : '<button class="ghost" id="dash" type="button">💨 Unik</button>'}<button class="ghost" id="leave">Wyjdź</button></div>`;
+    <div class="actions">${over ? '<button id="again">Jeszcze raz</button>' : '<button class="ghost" id="dash" type="button">💨 Unik</button>'}${fsOk() ? '<button class="ghost" id="fs" type="button">⛶ Pełny ekran</button>' : ''}<button class="ghost" id="leave">Wyjdź</button></div>
+    ${me >= 0 ? xhPanel() : ''}`;
   const cv = el.querySelector('#arena');
+  syncFs();
+  const fb = el.querySelector('#fs'); if (fb) fb.onclick = () => toggleFs(el);
+  if (me >= 0) bindXh(el, cv, over);
   bg = makeBg(); parts = []; rings = []; shake = 0; touches.clear();
   Object.keys(keys).forEach(k => delete keys[k]); firing = dashQ = false; lastKey = ''; sentAt = 0;
   disp = s.players.map(p => ({ x: p.x, y: p.y, a: p.a })); aimA = me >= 0 ? s.players[me].a : 0;
