@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gry ze znajomymi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="logo" id="logo" href="#">Pokój gier</a>
+  <div class="top-r"><div class="who" id="who"></div><button type="button" class="ghost" id="theme-btn" title="Kolory (paleta)" aria-label="Kolory">🎨</button></div>
+</header>
+<main id="app"></main>
+<div class="toast" id="toast" role="status"></div>
+<script src="theme.js"></script>
+<script src="sound.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="games/tictactoe.js"></script>
+<script src="games/hangman.js"></script>
+<script src="games/charades.js"></script>
+<script src="games/checkers.js"></script>
+<script src="games/panstwa.js"></script>
+<script src="games/battleship.js"></script>
+<script src="games/memory.js"></script>
+<script src="games/typing.js"></script>
+<script src="games/pong.js"></script>
+<script src="games/wordle.js"></script>
+<script src="games/uno.js"></script>
+<script src="games/chess.js"></script>
+<script src="games/arena-map.js"></script>
+<script src="games/arena.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
