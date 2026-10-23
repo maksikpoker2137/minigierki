@@ -96,7 +96,12 @@ const ensureLoop = r => {
   r.loop = setInterval(() => {
     const now = Date.now(), dt = Math.min((now - r.last) / 1000, 0.1); r.last = now;
     if (!rooms.has(r.code) || !r.state) { clearInterval(r.loop); r.loop = null; return; }
-    if (g.step(r.state, dt)) { emitRoom(r); trackWins(r); }
+    try {
+      if (g.step(r.state, dt)) { emitRoom(r); trackWins(r); }
+    } catch (e) { // błąd w jednej grze nie może wywrócić całego serwera
+      console.error('Błąd w pętli gry', r.gameId, e);
+      if (r.state && r.state.boss) { r.state.boss = null; r.state.banner = null; } // najczęściej winny jest boss – usuwamy go i gramy dalej
+    }
   }, 33);
 };
 const push = r => { trackWins(r); emitRoom(r); schedule(r); ensureLoop(r); broadcastRooms(); };

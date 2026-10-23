@@ -1,5 +1,5 @@
 // Efekty dźwiękowe syntezowane w przeglądarce (Web Audio) – bez plików audio.
-// Sfx.play('hitmark'|'hurt'|'hit'|'die'|'frag'|'boom'|'pick'|'shot', { w: broń, vol: 0..1 }); Sfx.toggle() włącza/wyłącza dźwięk.
+// Sfx.play('hitmark'|'hurt'|'hit'|'die'|'frag'|'boom'|'pick'|'shot'|'cannon'|'splash'|'explode'|'sunk'|'place'|'turn'|'sonar'|'lose', { w: broń, vol: 0..1 }); Sfx.toggle() włącza/wyłącza dźwięk.
 (function () {
   const KEY = 'dzwiek';
   let ctx = null, master = null, noiseBuf = null, muted = false, lastAt = {};
@@ -46,7 +46,17 @@
     frag(o) { [523, 659, 784, 1046].forEach((f, i) => tone('square', f, f, 0.12, 0.2 * o.vol, i * 0.07)); },        // twój frag
     boom(o) { noise(0.7, 0.7 * o.vol, 420); tone('sine', 110, 30, 0.6, 0.6 * o.vol); },
     pick(o) { tone('triangle', 660, 660, 0.07, 0.25 * o.vol); tone('triangle', 990, 990, 0.1, 0.25 * o.vol, 0.06); },
-    win(o) { [523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, f, 0.2, 0.28 * o.vol, i * 0.11)); }
+    win(o) { [523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, f, 0.2, 0.28 * o.vol, i * 0.11)); },
+    // ---- Statki ----
+    cannon(o) { noise(0.35, 0.6 * o.vol, 520); tone('sine', 150, 38, 0.32, 0.55 * o.vol); noise(0.12, 0.3 * o.vol, 2400, 'highpass'); },          // wystrzał z armaty
+    whistle(o) { tone('sine', 1500, 520, 0.38, 0.1 * o.vol); },                                                                                  // pocisk w locie
+    splash(o) { noise(0.5, 0.45 * o.vol, 900, 'bandpass', 0, 0.9); noise(0.35, 0.3 * o.vol, 2600, 'bandpass', 0.08, 1.2); [420, 560, 380].forEach((f, i) => tone('sine', f, f * 1.8, 0.09, 0.14 * o.vol, 0.12 + i * 0.07)); }, // pudło: plusk i bąbelki
+    explode(o) { noise(0.55, 0.75 * o.vol, 700); tone('sine', 120, 30, 0.5, 0.6 * o.vol); noise(0.35, 0.3 * o.vol, 3200, 'highpass', 0.05); tone('sawtooth', 220, 60, 0.3, 0.18 * o.vol); }, // trafienie
+    sunk(o) { noise(0.9, 0.8 * o.vol, 500); tone('sine', 100, 25, 0.9, 0.7 * o.vol); tone('sawtooth', 380, 50, 1.2, 0.3 * o.vol, 0.15); [300, 260, 220, 180].forEach((f, i) => tone('sine', f, f * 0.6, 0.18, 0.2 * o.vol, 0.5 + i * 0.16)); }, // zatopiony
+    place(o) { tone('square', 180, 90, 0.08, 0.25 * o.vol); noise(0.06, 0.25 * o.vol, 1800); },                                                   // postawienie statku
+    turn(o) { tone('sine', 880, 880, 0.12, 0.22 * o.vol); tone('sine', 1320, 1320, 0.16, 0.22 * o.vol, 0.1); },                                   // twoja kolej
+    sonar(o) { tone('sine', 1000, 1000, 0.7, 0.3 * o.vol); tone('sine', 1000, 1000, 0.9, 0.12 * o.vol, 0.35); },                                  // początek bitwy
+    lose(o) { [392, 330, 262, 196].forEach((f, i) => tone('triangle', f, f * 0.97, 0.3, 0.28 * o.vol, i * 0.2)); }
   };
 
   window.Sfx = {

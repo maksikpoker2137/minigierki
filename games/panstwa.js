@@ -85,10 +85,17 @@ module.exports = {
         if (s.cats.length <= 1) return { error: 'Musi zostać przynajmniej jedna kategoria.' };
         s.cats.splice(d.i, 1); return s;
       }
+      if (d.type === 'setcats') { // cała lista naraz (gotowe zestawy, przywracanie domyślnych)
+        if (!Array.isArray(d.cats)) return { error: 'Zła lista kategorii.' };
+        const out = [];
+        for (const raw of d.cats) { const n = cleanCat(raw); if (n.length >= 2 && !out.some(c => c.toLocaleLowerCase('pl') === n.toLocaleLowerCase('pl'))) out.push(n); }
+        if (!out.length) return { error: 'Musi zostać przynajmniej jedna kategoria.' };
+        s.cats = out.slice(0, MAX_CATS); return s;
+      }
       if (d.type === 'begin') return startRound(s);
       return { error: 'Najpierw trzeba zacząć grę.' };
     }
-    if (d.type === 'addcat' || d.type === 'delcat' || d.type === 'begin') return { error: 'Kategorie można zmieniać tylko przed grą.' };
+    if (d.type === 'addcat' || d.type === 'delcat' || d.type === 'setcats' || d.type === 'begin') return { error: 'Kategorie można zmieniać tylko przed grą.' };
     if (d.type === 'draft' || d.type === 'stop') {
       if (s.phase !== 'play') return d.type === 'draft' ? s : { error: 'Runda się skończyła.' };
       if (Date.now() > s.endsAt) return d.type === 'draft' ? s : { error: 'Czas minął.' };

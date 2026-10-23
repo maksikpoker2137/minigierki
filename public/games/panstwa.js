@@ -93,11 +93,16 @@ function buildReview(el, s) {
   el.querySelector('#leave').onclick = () => send('leave');
 }
 
+const PRESETS = ['Marki aut', 'Zawód', 'Rzeka', 'Roślina', 'Owoc lub warzywo', 'Potrawa', 'Napój', 'Kolor', 'Sport', 'Film', 'Serial', 'Postać z bajki', 'Instrument', 'Ubranie', 'Część ciała', 'Piosenkarz lub zespół', 'Gra komputerowa', 'Marka telefonu', 'Sklep lub marka', 'Góra', 'Morze lub jezioro', 'Język', 'Przedmiot w domu', 'Książka'];
+const SETS = [['Klasyka', ['Państwo', 'Miasto', 'Imię', 'Zwierzę', 'Rzecz']], ['Rozrywka', ['Film', 'Serial', 'Piosenkarz lub zespół', 'Gra komputerowa', 'Postać z bajki']], ['Jedzenie', ['Potrawa', 'Owoc lub warzywo', 'Napój', 'Sklep lub marka', 'Zwierzę']], ['Motoryzacja i technika', ['Marki aut', 'Marka telefonu', 'Zawód', 'Rzecz', 'Miasto']]];
 function setupList(el, s) {
   const host = me === 0;
   el.querySelector('#cl').innerHTML = s.cats.map((c, i) => `<li class="pm-cat"><span>${esc(c)}</span>${host ? `<button class="pm-x" data-i="${i}" aria-label="Usuń kategorię ${esc(c)}" title="Usuń"${s.cats.length <= 1 ? ' disabled' : ''}>✕</button>` : ''}</li>`).join('');
   el.querySelectorAll('.pm-x').forEach(b => b.onclick = () => send('move', { type: 'delcat', i: +b.dataset.i }));
   el.querySelector('#cnt').textContent = `${s.cats.length}/12`;
+  const low = s.cats.map(c => c.toLocaleLowerCase('pl'));
+  el.querySelectorAll('.pm-pre').forEach(b => { const on = low.includes(b.dataset.c.toLocaleLowerCase('pl')); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.onclick = () => { const i = low.indexOf(b.dataset.c.toLocaleLowerCase('pl')); send('move', i >= 0 ? { type: 'delcat', i } : { type: 'addcat', name: b.dataset.c }); }; });
+  el.querySelectorAll('.pm-set').forEach(b => b.onclick = () => send('move', { type: 'setcats', cats: SETS[+b.dataset.k][1] }));
 }
 
 function buildSetup(el, s) {
@@ -105,7 +110,9 @@ function buildSetup(el, s) {
   el.innerHTML = `<div class="panel pm-setup"><h2>Kategorie</h2>
     <p class="lead" style="margin:6px 0 14px">${host ? 'Jesteś gospodarzem: dodaj własne kategorie albo usuń te, których nie chcesz.' : 'Gospodarz ustawia kategorie…'}</p>
     <ul class="pm-cats" id="cl"></ul><p class="pm-help" style="margin:8px 0 0"><span id="cnt"></span> kategorii</p>
-    ${host ? `<div class="row" style="flex-wrap:nowrap;margin-top:14px"><input id="nc" maxlength="24" autocomplete="off" placeholder="Nowa kategoria, np. Zawód"><button id="add">Dodaj</button></div>` : ''}
+    ${host ? `<h3 style="margin:16px 0 6px;font-size:1rem">Gotowe zestawy</h3><div class="pm-pres">${SETS.map((x, k) => `<button type="button" class="ghost pm-set" data-k="${k}">${x[0]}</button>`).join('')}</div>
+    <h3 style="margin:14px 0 6px;font-size:1rem">Kliknij kategorię, żeby ją dodać lub usunąć</h3><div class="pm-pres">${PRESETS.map(c => `<button type="button" class="pm-pre" data-c="${c}">${c}</button>`).join('')}</div>` : ''}
+    ${host ? `<div class="row" style="flex-wrap:nowrap;margin-top:14px"><input id="nc" maxlength="24" autocomplete="off" placeholder="Albo wpisz własną, np. Imię psa"><button id="add">Dodaj</button></div>` : ''}
     <div class="actions">${host ? '<button id="begin">Zaczynamy grę</button>' : ''}<button class="ghost" id="leave">Wyjdź</button></div></div>`;
   if (host) {
     const nc = el.querySelector('#nc');

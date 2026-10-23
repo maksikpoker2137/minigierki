@@ -43,3 +43,10 @@ Sterowanie: WASD / strzałki – ruch, myszka – celowanie, lewy przycisk – s
 **Dźwięk:** strzały, trafienie wroga, oberwanie, śmierć, frag, wybuchy i zbieranie przedmiotów (syntezowane w przeglądarce, bez plików audio); wyłączasz przyciskiem „Dźwięk” pod planszą albo klawiszem M.
 **Kolory:** przycisk 🎨 w nagłówku – paleta (albo własny kolor) dla tła strony oraz ziemi i lawy na mapach lawowych. Wybór zapamiętuje się w przeglądarce.
 **Ranking:** w poczekalni widać ranking wygranych całego serwera (zapis w `data/wins.json`, liczony po nicku, folder `data` jest w `.gitignore`).
+
+## Co nowego
+- **Arena Lawy**: serwer nie wywraca się już przy błędzie w pętli gry (boss znika zamiast crashować proces), a rysowanie w przeglądarce nie „zamarza” po błędzie.
+  Po wygranej pojawia się napis **WIN** z konfetti i **głosowanie na następną mapę** (20 s, wygrywa większość, remis losuje; „Start teraz” pomija czekanie).
+  Trzy nowe **duże mapy** (3200×1800, kamera podąża za graczem, minimapa): **Wielki las**, **Miasto**, **Labirynt** – dużo ścian, każda sprawdzona pod kątem tego, że wszystkie spawny i boss są osiągalne.
+- **Państwa-miasta**: gotowe kategorie do kliknięcia (np. Marki aut, Zawód, Rzeka…), gotowe zestawy i nadal możliwość wpisania własnych.
+- **Statki**: kadłuby zamiast kwadratów, animacje pudła/trafienia/zatopienia oraz dźwięki (armata, plusk, wybuch, zatopienie, sonar, wygrana/przegrana), przycisk wyciszenia.

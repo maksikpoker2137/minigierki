@@ -51,7 +51,36 @@ const grid = (cell, cls) => {
   for (let r = 0; r < N; r++) { h += `<span class="bs-lab">${r + 1}</span>`; for (let c = 0; c < N; c++) h += cell(r * N + c); }
   return h + '</div>';
 };
-const blocks = n => `<span class="bs-blk">${'■'.repeat(n)}</span>`;
+// statek jako kadłub: rufa (pierwsze pole), śródokręcie, dziób (ostatnie pole) – CSS dorysowuje kształt
+const hullMap = (fleet, extra) => {
+  const m = new Map();
+  (fleet || []).forEach((cells, k) => {
+    const h = cells.length < 2 || cells[1] - cells[0] === 1;
+    cells.forEach((c, i) => m.set(c, `hull ${h ? 'hh' : 'hv'} ${i === 0 ? 'p-s' : i === cells.length - 1 ? 'p-b' : 'p-m'} ${extra ? extra(cells, k) : ''}`));
+  });
+  return m;
+};
+const blocks = n => `<span class="bs-blk">${Array.from({ length: n }, (_, i) => `<i class="msc hull hh ${i === 0 ? 'p-s' : i === n - 1 ? 'p-b' : 'p-m'}"></i>`).join('')}</span>`;
+const mark = (shot, hit, sunk) => !shot ? '' : hit ? (sunk ? '<i class="mk x">✕</i>' : '<i class="mk fire">🔥</i>') : '<i class="mk ring"></i>';
+const sfx = (n, o) => { if (window.Sfx) Sfx.play(n, o); };
+const sync = () => { const b = document.getElementById('snd'); if (b && window.Sfx) b.textContent = Sfx.isMuted() ? '🔇 Dźwięk wyłączony' : '🔊 Dźwięk włączony'; };
+// dźwięki i animacje reagują na zmianę stanu (nie na pierwsze wejście do gry)
+let seen = null;
+function sounds(s, me) {
+  const key = `${s.round}|${s.phase}|${s.last ? s.last.by + ':' + s.last.cell : ''}`;
+  const prev = seen; seen = key;
+  if (prev === null || prev === key) return;
+  const [pr, pph, plast] = prev.split('|');
+  if (s.phase === 'play' && pph === 'setup') { sfx('sonar'); return; }
+  if (s.phase === 'over' && pph !== 'over') { setTimeout(() => sfx(s.winner === me ? 'win' : 'lose'), 900); }
+  const l = s.last; if (!l || `${l.by}:${l.cell}` === plast) return;
+  const mineShot = l.by === me;
+  if (mineShot) sfx('cannon'); else sfx('whistle', { vol: 0.5 });
+  setTimeout(() => {
+    if (l.sunk) sfx('sunk'); else if (l.hit) sfx('explode', { vol: mineShot ? 1 : 0.85 }); else sfx('splash', { vol: mineShot ? 1 : 0.7 });
+    if (!l.hit && !mineShot && s.phase === 'play' && s.turn === me) setTimeout(() => sfx('turn'), 650);
+  }, mineShot ? 380 : 450);
+}
 
 let draft = null, ctx = null;
 const redraw = () => ctx && Games.battleship.render(ctx.el, ctx.s, ctx.me, ctx.send);
@@ -73,11 +102,12 @@ function spectate(el, s, send) {
   const status = s.phase === 'setup' ? 'Gracze rozstawiają floty…'
     : s.phase === 'over' ? `${esc(s.names[s.winner])} zatopił całą flotę!` : `Strzela ${esc(s.names[s.turn])}…`;
   const side = i => {
-    const b = s.boards[i], sm = new Map(b.shots.map(x => [x.c, x.hit])), sunk = new Set(b.sunk.flat()), reveal = new Set((b.fleet || []).flat());
+    const b = s.boards[i], sm = new Map(b.shots.map(x => [x.c, x.hit])), sunk = new Set(b.sunk.flat());
+    const hm = hullMap(b.sunk.concat((b.fleet || []).filter(f => !b.sunk.some(z => z[0] === f[0]))), cells => sunk.has(cells[0]) ? 'sunk' : 'reveal');
     const g = grid(c => {
       const shot = sm.has(c), hit = sm.get(c);
-      const cls = ['bs-c', shot ? (hit ? (sunk.has(c) ? 'sunk' : 'hit') : 'miss') : (reveal.has(c) ? 'reveal' : ''), s.last && s.last.by === i && s.last.cell === c ? 'last' : ''].join(' ');
-      return `<span class="${cls}">${shot ? (hit ? '✕' : '•') : ''}</span>`;
+      const cls = ['bs-c', hm.get(c) || '', shot ? (hit ? (sunk.has(c) ? 'sunk' : 'hit') : 'miss') : '', s.last && s.last.by === i && s.last.cell === c ? 'last' : ''].join(' ');
+      return `<span class="${cls}">${mark(shot, hit, sunk.has(c))}</span>`;
     }, 'bs-mine');
     return `<div class="bs-side"><h3>Strzały: ${esc(s.names[i])}</h3>${g}</div>`;
   };
@@ -94,6 +124,7 @@ Games.battleship = {
   render(el, s, me, send) {
     ctx = { el, s, me, send };
     if (s.spectator) return spectate(el, s, send);
+    sounds(s, me);
     const opp = 1 - me, over = s.phase === 'over';
     if (s.phase === 'setup') { if (!draft || draft.round !== s.round) draft = freshDraft(s.round); } else draft = null;
     const setting = s.phase === 'setup' && !s.mine;
@@ -112,7 +143,8 @@ Games.battleship = {
     if (setting) {
       sub = '';
       const at = new Map(); draft.ships.forEach((sh, i) => sh && cellsOf(sh).forEach(c => at.set(c, i)));
-      const board = grid(i => `<button class="bs-c ${at.has(i) ? 'ship' : ''}" data-i="${i}" ${at.has(i) ? `data-s="${at.get(i)}"` : ''} aria-label="Pole ${pos(i)}"></button>`, 'bs-set');
+      const hm = hullMap(draft.ships.map(sh => sh ? cellsOf(sh) : null).filter(Boolean));
+      const board = grid(i => `<button class="bs-c ${at.has(i) ? 'ship ' + hm.get(i) : ''}" data-i="${i}" ${at.has(i) ? `data-s="${at.get(i)}"` : ''} aria-label="Pole ${pos(i)}"></button>`, 'bs-set');
       const ok = draft.ships.every(Boolean);
       main = `<div class="bs-wrap"><div class="bs-side"><h3>Twoja plansza</h3>${board}</div>
         <div class="bs-side bs-tools"><h3>Statki</h3>
@@ -123,20 +155,21 @@ Games.battleship = {
         </div></div>`;
     } else {
       const mineSet = new Set((s.mine || []).flat()), oppShot = new Set(s.oppShots);
+      const myHm = hullMap(s.mine || [], cells => cells.every(c => oppShot.has(c)) ? 'sunk' : '');
       const myBoard = grid(i => {
-        const ship = mineSet.has(i), shot = oppShot.has(i);
-        const cls = ['bs-c', ship ? 'ship' : '', shot ? (ship ? 'hit' : 'miss') : '', s.last && s.last.by !== me && s.last.cell === i ? 'last' : ''].join(' ');
-        return `<span class="${cls}" aria-label="Twoje pole ${pos(i)}">${shot ? (ship ? '✕' : '•') : ''}</span>`;
+        const ship = mineSet.has(i), shot = oppShot.has(i), dead = ship && (myHm.get(i) || '').includes('sunk');
+        const cls = ['bs-c', myHm.get(i) || '', shot ? (ship ? 'hit' : 'miss') : '', s.last && s.last.by !== me && s.last.cell === i ? 'last' : ''].join(' ');
+        return `<span class="${cls}" aria-label="Twoje pole ${pos(i)}">${mark(shot, ship, dead)}</span>`;
       }, 'bs-mine');
       if (s.phase === 'setup') main = `<div class="bs-wrap"><div class="bs-side"><h3>Twoja flota</h3>${myBoard}</div></div>`;
       else {
         const sm = new Map(s.myShots.map(x => [x.c, x.hit])), sunk = new Set(s.oppSunk.flat());
-        const reveal = new Set((s.oppFleet || []).flat());
         const canFire = s.phase === 'play' && s.turn === me;
+        const en = hullMap(s.oppSunk.concat((s.oppFleet || []).filter(f => !s.oppSunk.some(z => z[0] === f[0]))), cells => sunk.has(cells[0]) ? 'sunk' : 'reveal');
         const enemy = grid(i => {
           const shot = sm.has(i), hit = sm.get(i);
-          const cls = ['bs-c', shot ? (hit ? (sunk.has(i) ? 'sunk' : 'hit') : 'miss') : (reveal.has(i) ? 'reveal' : ''), s.last && s.last.by === me && s.last.cell === i ? 'last' : ''].join(' ');
-          return `<button class="${cls}" data-i="${i}" ${!canFire || shot ? 'disabled' : ''} aria-label="Strzał w ${pos(i)}">${shot ? (hit ? '✕' : '•') : ''}</button>`;
+          const cls = ['bs-c', en.get(i) || '', shot ? (hit ? (sunk.has(i) ? 'sunk' : 'hit') : 'miss') : '', s.last && s.last.by === me && s.last.cell === i ? 'last' : ''].join(' ');
+          return `<button class="${cls}" data-i="${i}" ${!canFire || shot ? 'disabled' : ''} aria-label="Strzał w ${pos(i)}">${mark(shot, hit, sunk.has(i))}</button>`;
         }, `bs-fire ${canFire ? 'live' : ''}`);
         const left = [...LENS]; s.oppSunk.forEach(f => { const k = left.indexOf(f.length); if (k > -1) left.splice(k, 1); });
         const strip = `<div class="bs-fleet" aria-label="Flota przeciwnika">${left.map(n => `<span class="bs-mini">${blocks(n)}</span>`).join('')}${s.oppSunk.map(f => `<span class="bs-mini dead">${blocks(f.length)}</span>`).join('')}</div>`;
@@ -147,7 +180,9 @@ Games.battleship = {
 
     el.innerHTML = `<div class="bar"><div class="score">${chips}</div></div>
       <div class="status" aria-live="polite">${status}${sub ? `<div class="bs-sub">${sub}</div>` : ''}</div>${main}
-      <div class="actions">${over ? '<button id="again">Kolejna runda</button>' : ''}<button class="ghost" id="leave">Wyjdź</button></div>`;
+      <div class="actions">${over ? '<button id="again">Kolejna runda</button>' : ''}<button class="ghost" id="snd" type="button"></button><button class="ghost" id="leave">Wyjdź</button></div>`;
+    sync(); el.querySelector('#snd').onclick = () => { Sfx.toggle(); sync(); };
+    if (over) el.classList.toggle('bs-won', s.winner === me);
 
     if (setting) {
       const board = el.querySelector('.bs-set');
@@ -164,13 +199,13 @@ Games.battleship = {
         const k = target(); if (k < 0) return;
         const sh = anchored(k, +b.dataset.i, draft.h);
         if (!fits(draft.ships, sh)) return;
-        draft.ships[k] = sh;
+        draft.ships[k] = sh; sfx('place');
         const next = draft.ships.findIndex(x => !x); draft.sel = next < 0 ? k : next;
         redraw();
       });
       el.querySelectorAll('.bs-ship').forEach(b => b.onclick = () => { const k = +b.dataset.k; draft.ships[k] = null; draft.sel = k; redraw(); });
       el.querySelector('#rot').onclick = () => { draft.h = !draft.h; redraw(); };
-      el.querySelector('#rnd').onclick = () => { draft.ships = randomFleet(); draft.sel = Math.max(0, draft.ships.findIndex(x => !x)); redraw(); };
+      el.querySelector('#rnd').onclick = () => { sfx('place'); draft.ships = randomFleet(); draft.sel = Math.max(0, draft.ships.findIndex(x => !x)); redraw(); };
       el.querySelector('#clr').onclick = () => { draft = freshDraft(s.round); redraw(); };
       el.querySelector('#go').onclick = () => send('move', { type: 'ready', ships: draft.ships });
     }

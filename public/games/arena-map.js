@@ -76,9 +76,9 @@
   const border = [{ k: 'trees', x: 0, y: 0, w: W, h: 44 }, { k: 'trees', x: 0, y: H - 44, w: W, h: 44 }, { k: 'trees', x: 0, y: 44, w: 44, h: H - 88 }, { k: 'trees', x: W - 44, y: 44, w: 44, h: H - 88 }];
   const cornerSpawns = [[110, 100], [1690, 900], [110, 900], [1690, 100], [900, 110], [900, 890]]; // 0 i 2 (lewa strona) kontra 1 i 3 (prawa) w trybie 2v2
 
-  function autoSpots(m) {
-    const out = [];
-    for (let x = 110; x <= W - 110; x += 110) for (let y = 110; y <= H - 110; y += 110) {
+  function autoSpots(m, step) {
+    const out = [], MW = m.W || W, MH = m.H || H; step = step || 110;
+    for (let x = 110; x <= MW - 110; x += step) for (let y = 110; y <= MH - 110; y += step) {
       if (m.rects.some(r => distRect(x, y, r) < 40)) continue;
       if (m.spawns.slice(0, 4).some(s => Math.hypot(s[0] - x, s[1] - y) < 110)) continue;
       if (Math.hypot(x - m.boss[0], y - m.boss[1]) < 90) continue;
@@ -187,6 +187,108 @@
   };
   ['meadow', 'winter'].forEach(id => { maps[id].itemSpots = autoSpots(maps[id]); });
 
+  // ---------- DUŻE MAPY (kamera podąża za graczem): las, miasto i labirynt – dużo ścian, deterministyczne (ten sam układ na serwerze i w przeglądarce) ----------
+  const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const overlap = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+  function bigBase(d) {
+    const BW = d.W, BH = d.H, rotB = r => Object.assign({}, r, { x: BW - r.x - r.w, y: BH - r.y - r.h });
+    const bord = [{ k: 'trees', x: 0, y: 0, w: BW, h: 44 }, { k: 'trees', x: 0, y: BH - 44, w: BW, h: 44 }, { k: 'trees', x: 0, y: 44, w: 44, h: BH - 88 }, { k: 'trees', x: BW - 44, y: 44, w: 44, h: BH - 88 }];
+    return { BW, BH, rotB, bord };
+  }
+  function finishBig(d, rects, extra) {
+    const m = Object.assign({ id: d.id, name: d.name, icon: d.icon, theme: d.theme, W: d.W, H: d.H, big: true, hasLava: false, isLava: () => false, stones: [], onStone: () => false, boulders: [], rects, paths: [], spawns: d.spawns, boss: d.boss, itemMax: 16, itemEvery: 3200 }, extra || {});
+    m.itemSpots = autoSpots(m, 150);
+    return m;
+  }
+
+  // 1) Wielki las: kępy drzew, skały, płoty i stawy rozrzucone losowo (symetrycznie o 180°)
+  (function () {
+    const d = { id: 'las', name: 'Wielki las', icon: '🌳', theme: 'meadow', W: 3200, H: 1800 };
+    d.spawns = [[130, 130], [d.W - 130, d.H - 130], [130, d.H - 130], [d.W - 130, 130], [d.W / 2, 130], [d.W / 2, d.H - 130], [130, d.H / 2], [d.W - 130, d.H / 2]];
+    d.boss = [d.W / 2, d.H / 2];
+    const { rotB, bord } = bigBase(d), rnd = mulberry(20260);
+    const keep = d.spawns.concat([d.boss]), rects = [];
+    const clear = r => keep.every(p => Math.hypot(Math.max(r.x - p[0], 0, p[0] - r.x - r.w), Math.max(r.y - p[1], 0, p[1] - r.y - r.h)) > (p === d.boss ? 190 : 150));
+    let guard = 0;
+    while (rects.length < 260 && guard++ < 30000) {
+      const roll = rnd(), horiz = rnd() < 0.5; let r;
+      if (roll < 0.5) { const l = 120 + rnd() * 300, t = 50; r = { k: 'trees', x: 0, y: 0, w: horiz ? l : t, h: horiz ? t : l }; }
+      else if (roll < 0.72) { const a = 60 + rnd() * 70, b = 60 + rnd() * 70; r = { k: 'rock', x: 0, y: 0, w: a, h: b }; }
+      else if (roll < 0.88) { const l = 140 + rnd() * 260; r = { k: 'fence', x: 0, y: 0, w: horiz ? l : 18, h: horiz ? 18 : l }; }
+      else { r = { k: 'water', x: 0, y: 0, w: 160 + rnd() * 160, h: 110 + rnd() * 110 }; }
+      r.x = Math.round(80 + rnd() * (d.W - 160 - r.w)); r.y = Math.round(80 + rnd() * (d.H - 160 - r.h));
+      const q = rotB(r);
+      if (!clear(r) || !clear(q) || overlap(r, q, 100)) continue;
+      if (rects.some(o => overlap(o, r, 100) || overlap(o, q, 100))) continue;
+      rects.push(r, q);
+    }
+    maps.las = finishBig(d, bord.concat(rects), { paths: [], plaza: null });
+  })();
+
+  // 2) Miasto: siatka kwartałów (budynki, parki, oczka wodne) przedzielona ulicami, plac z bossem pośrodku
+  (function () {
+    const d = { id: 'miasto', name: 'Miasto', icon: '🏙️', theme: 'meadow', W: 3200, H: 1800 };
+    const { rotB, bord } = bigBase(d), rnd = mulberry(7741);
+    const BWD = 300, BHT = 260, GAP = 140, X0 = 130, Y0 = 170, COLS = 7, ROWS = 4;
+    const gx = k => X0 + BWD + GAP / 2 + k * (BWD + GAP), gy = k => Y0 + BHT + GAP / 2 + k * (BHT + GAP);
+    const rects = [], seen = new Set();
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) {
+      const mc = COLS - 1 - c, mr = ROWS - 1 - r, key = c + ',' + r, mkey = mc + ',' + mr;
+      if (seen.has(key)) continue; seen.add(key); seen.add(mkey);
+      if (c === 3 && (r === 1 || r === 2)) continue; // plac pośrodku
+      const x = X0 + c * (BWD + GAP), y = Y0 + r * (BHT + GAP), t = rnd(), blk = [];
+      if (t < 0.45) blk.push({ k: 'rock', x: x + 10, y: y + 10, w: BWD - 20, h: BHT - 20 });
+      else if (t < 0.7) { blk.push({ k: 'rock', x: x + 10, y: y + 10, w: 130, h: BHT - 20 }, { k: 'rock', x: x + BWD - 140, y: y + 10, w: 130, h: BHT - 20 }); }
+      else if (t < 0.85) { blk.push({ k: 'trees', x: x + 20, y: y + 20, w: BWD - 40, h: 50 }, { k: 'trees', x: x + 20, y: y + BHT - 70, w: BWD - 40, h: 50 }, { k: 'fence', x: x + 20, y: y + BHT / 2 - 9, w: BWD - 40, h: 18 }); }
+      else blk.push({ k: 'water', x: x + 40, y: y + 40, w: BWD - 80, h: BHT - 80 }, { k: 'fence', x: x + 10, y: y + 10, w: BWD - 20, h: 18 });
+      blk.forEach(b => { rects.push(b); const q = rotB(b); if (!(c === mc && r === mr)) rects.push(q); });
+      if (c === mc && r === mr) blk.forEach(b => rects.push(rotB(b)));
+    }
+    const paths = [];
+    for (let k = 0; k < ROWS - 1; k++) paths.push({ x: 44, y: gy(k) - GAP / 2, w: d.W - 88, h: GAP });
+    for (let k = 0; k < COLS - 1; k++) paths.push({ x: gx(k) - GAP / 2, y: 44, w: GAP, h: d.H - 88 });
+    d.spawns = [[gx(0), gy(0)], [gx(5), gy(2)], [gx(0), gy(2)], [gx(5), gy(0)], [gx(2), gy(1)], [gx(3), gy(1)], [gx(1), gy(0)], [gx(4), gy(2)]];
+    d.boss = [d.W / 2, d.H / 2];
+    maps.miasto = finishBig(d, bord.concat(rects), { paths, plaza: [d.W / 2, d.H / 2, 150] });
+  })();
+
+  // 3) Labirynt: zimowy żywopłot z drzew; symetryczny, z otwartym pokojem pośrodku (boss) i pętlami, żeby nie było ślepych zaułków wszędzie
+  (function () {
+    const d = { id: 'labirynt', name: 'Labirynt', icon: '🧱', theme: 'winter', W: 3200, H: 1800 };
+    const { bord } = bigBase(d), rnd = mulberry(913), C = 200, NC = 16, NR = 9, TH = 36;
+    const open = new Set(), ek = (c, r, dir) => c + ',' + r + ',' + dir; // dir 'h' = przejście w prawo (c→c+1), 'v' = w dół (r→r+1)
+    const rotEdge = (c, r, dir) => dir === 'h' ? [NC - 2 - c, NR - 1 - r, 'h'] : [NC - 1 - c, NR - 2 - r, 'v'];
+    const HC = NC / 2, vis = Array.from({ length: NC * NR }, () => false), stack = [[0, 0]]; vis[0] = true;
+    while (stack.length) { // DFS tylko na lewej połowie (c < 8): spójny labirynt, który potem odbijamy o 180°
+      const [c, r] = stack[stack.length - 1], nb = [];
+      if (c + 1 < HC && !vis[r * NC + c + 1]) nb.push([c + 1, r, ek(c, r, 'h')]);
+      if (c > 0 && !vis[r * NC + c - 1]) nb.push([c - 1, r, ek(c - 1, r, 'h')]);
+      if (r + 1 < NR && !vis[(r + 1) * NC + c]) nb.push([c, r + 1, ek(c, r, 'v')]);
+      if (r > 0 && !vis[(r - 1) * NC + c]) nb.push([c, r - 1, ek(c, r - 1, 'v')]);
+      if (!nb.length) { stack.pop(); continue; }
+      const [nc, nr, e] = nb[Math.floor(rnd() * nb.length)]; open.add(e); vis[nr * NC + nc] = true; stack.push([nc, nr]);
+    }
+    for (let i = 0; i < 9; i++) { // kilka dodatkowych przejść (pętle), tylko w lewej połowie
+      const c = Math.floor(rnd() * (HC - 1)), r = Math.floor(rnd() * (NR - 1)), dir = rnd() < 0.5 ? 'h' : 'v';
+      open.add(ek(c, r, dir));
+    }
+    for (const e of [...open]) { const [c, r, dir] = e.split(','); open.add(ek(...rotEdge(+c, +r, dir))); } // prawa połowa = obrócona lewa
+    [1, 4, 7].forEach(r => open.add(ek(HC - 1, r, 'h'))); // drzwi w środkowej linii łączą obie połowy
+    for (let r = 3; r <= 5; r++) { open.add(ek(HC - 1, r, 'h')); if (r < 5) { open.add(ek(HC - 1, r, 'v')); open.add(ek(HC, r, 'v')); } } // pokój pośrodku (boss)
+    const rects = [];
+    for (let r = 0; r < NR; r++) { let run = null; // ściany pionowe (między c i c+1) scalone w pasy
+      for (let c = 0; c < NC - 1; c++) { /* składane niżej po kolumnach */ } }
+    for (let c = 0; c < NC - 1; c++) { let start = -1; // pionowe: linia x = (c+1)*C, odcinki po r
+      for (let r = 0; r <= NR; r++) { const wall = r < NR && !open.has(ek(c, r, 'h')); if (wall && start < 0) start = r; if (!wall && start >= 0) { rects.push({ k: 'trees', x: (c + 1) * C - TH / 2, y: start * C, w: TH, h: (r - start) * C }); start = -1; } } }
+    for (let r = 0; r < NR - 1; r++) { let start = -1; // poziome: linia y = (r+1)*C
+      for (let c = 0; c <= NC; c++) { const wall = c < NC && !open.has(ek(c, r, 'v')); if (wall && start < 0) start = c; if (!wall && start >= 0) { rects.push({ k: 'trees', x: start * C, y: (r + 1) * C - TH / 2, w: (c - start) * C, h: TH }); start = -1; } } }
+    const cc = (c, r) => [c * C + C / 2, r * C + C / 2];
+    d.spawns = [cc(0, 0), cc(15, 8), cc(0, 8), cc(15, 0), cc(7, 0), cc(8, 8), cc(0, 4), cc(15, 4)];
+    d.boss = [d.W / 2, d.H / 2];
+    maps.labirynt = finishBig(d, bord.concat(rects), { paths: [], itemMax: 14 });
+  })();
+
+  Object.values(maps).forEach(m => { m.W = m.W || W; m.H = m.H || H; });
   const get = id => maps[id] || maps.lava;
   const list = Object.values(maps).map(m => [m.id, m.icon + ' ' + m.name]);
 

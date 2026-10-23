@@ -2,7 +2,6 @@
 // Klient wysyła tylko swoje wejście (kierunek, celowanie, strzał) i prośbę o unik, więc nie da się oszukiwać pozycją.
 // Mapa (lawa, kamienie, głazy) jest we wspólnym pliku public/games/arena-map.js.
 const M = require('../public/games/arena-map.js');
-const { W, H } = M;
 
 const KILLS = 5, TEAM_KILLS = 10;      // do ilu fragów gramy (solo / 2v2 – liczą się fragi drużyny)
 const PR = 18;                         // promień gracza
@@ -10,6 +9,7 @@ const SPEED = 235, BOOST_MUL = 1.4;    // prędkość biegu i mnożnik po wzmocn
 const DASH_SPEED = 720, DASH_MS = 170, DASH_CD = 2200; // unik: krótki zryw, w trakcie którego lawa nie parzy
 const LAVA_DPS = 32;                   // obrażenia od lawy na sekundę
 const RESPAWN_MS = 3000, INV_MS = 2000, START_MS = 3000;
+const VOTE_MS = 20000;                 // ile trwa głosowanie na następną mapę po wygranej
 const ITEM_EVERY = 5000, MAX_ITEMS = 8, BOOST_MS = 6000, ROCKET_R = 95;
 const EVENT_EVERY = 30000;             // co ile ms rusza nowe wydarzenie (boss, meteory, buffy…)
 const BOSS_R = 38, BOSS_MS = 28000, BOSS_LEGEND_MAX = 3;
@@ -49,7 +49,7 @@ function fx(s, type, x, y, extra) { s.fx.push(Object.assign({ id: ++s.nid, t: Da
 function newPlayer(i, mp) {
   const sp = mp.spawns[i];
   return {
-    x: sp[0], y: sp[1], aim: Math.atan2(H / 2 - sp[1], W / 2 - sp[0]), vx: 0, vy: 0, kx: 0, ky: 0,
+    x: sp[0], y: sp[1], aim: Math.atan2(mp.H / 2 - sp[1], mp.W / 2 - sp[0]), vx: 0, vy: 0, kx: 0, ky: 0,
     hp: 100, sh: 0, w: 'pistol', ammo: -1, dead: false, respawnAt: 0, inv: 0, boostUntil: 0,
     nextShot: 0, lastShot: 0, dashUntil: 0, dashReady: 0, dvx: 0, dvy: 0,
     kills: 0, deaths: 0, lastBy: null, lastAt: 0, lv: 0, rageUntil: 0, lastHurt: 0, shots: 0
@@ -83,6 +83,15 @@ function create(names, wins, round, opts) {
   return s;
 }
 
+function startVote(s, now) { s.votes = s.names.map(() => null); s.voteEnd = now + VOTE_MS; s.voteDirty = true; }
+// kończy głosowanie: wygrywa mapa z największą liczbą głosów (remis losowo, brak głosów = ta sama mapa) i od razu startuje nowa runda
+function nextRound(s) {
+  const tally = {}; (s.votes || []).forEach(v => { if (v) tally[v] = (tally[v] || 0) + 1; });
+  const top = Math.max(0, ...Object.values(tally)), best = Object.keys(tally).filter(k => tally[k] === top);
+  const map = best.length ? best[Math.floor(Math.random() * best.length)] : s.map;
+  return create(s.names, s.wins, s.round + 1, Object.assign({}, s.opts, { map }));
+}
+
 function damage(s, i, amt, by, weapon, now, ignoreShield) {
   const p = s.players[i];
   if (p.dead || p.inv > now || s.phase !== 'play') return;
@@ -109,8 +118,8 @@ function die(s, i, by, weapon, now) {
     const k = s.players[killer]; k.kills++;
     if (s.team) {
       const t = s.team[killer]; s.teamKills[t]++;
-      if (s.teamKills[t] >= s.target) { s.phase = 'over'; s.winner = killer; s.winTeam = t; s.team.forEach((tt, j) => { if (tt === t) s.wins[j]++; }); }
-    } else if (k.kills >= s.target) { s.phase = 'over'; s.winner = killer; s.wins[killer]++; }
+      if (s.teamKills[t] >= s.target) { s.phase = 'over'; startVote(s, now); s.winner = killer; s.winTeam = t; s.team.forEach((tt, j) => { if (tt === t) s.wins[j]++; }); }
+    } else if (k.kills >= s.target) { s.phase = 'over'; startVote(s, now); s.winner = killer; s.wins[killer]++; }
   }
 }
 
@@ -192,8 +201,8 @@ function startEvent(s, now) {
     banner(s, '☄️ DESZCZ METEORÓW', 'Uciekaj z czerwonych kręgów!', now);
     for (let k = 0; k < 10; k++) {
       const alive = s.players.filter(p => !p.dead), near = alive.length && Math.random() < 0.5 ? alive[Math.floor(Math.random() * alive.length)] : null;
-      const x = near ? near.x + rnd(-120, 120) : rnd(80, W - 80), y = near ? near.y + rnd(-120, 120) : rnd(80, H - 80);
-      s.hazards.push({ id: ++s.nid, x: clamp(x, 40, W - 40), y: clamp(y, 40, H - 40), r: 90, at: now + 900 + k * 550 });
+      const x = near ? near.x + rnd(-120, 120) : rnd(80, s.mp.W - 80), y = near ? near.y + rnd(-120, 120) : rnd(80, s.mp.H - 80);
+      s.hazards.push({ id: ++s.nid, x: clamp(x, 40, s.mp.W - 40), y: clamp(y, 40, s.mp.H - 40), r: 90, at: now + 900 + k * 550 });
     }
   }
   else if (type === 'frenzy') { s.frenzyUntil = now + 10000; banner(s, '🔥 SZAŁ OBRAŻEŃ', 'Wszyscy zadają podwójne obrażenia przez 10 s', now); }
@@ -261,7 +270,7 @@ function solidify(s, p) {
   }
   for (const r of s.mp.rects) { const o = M.pushRect(p.x, p.y, PR, r); if (o) { p.x = o[0]; p.y = o[1]; } }
   if (s.boss) { const dx = p.x - s.boss.x, dy = p.y - s.boss.y, d = Math.hypot(dx, dy), min = s.boss.r + PR; if (d < min) { const n = d || 1; p.x = s.boss.x + dx / n * min; p.y = s.boss.y + dy / n * min; } }
-  p.x = clamp(p.x, PR, W - PR); p.y = clamp(p.y, PR, H - PR);
+  p.x = clamp(p.x, PR, s.mp.W - PR); p.y = clamp(p.y, PR, s.mp.H - PR);
 }
 function moveP(s, p, dx, dy) {
   const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 9));
@@ -285,6 +294,11 @@ module.exports = {
 
   move(s, me, d) {
     const p = s.players[me], now = Date.now();
+    if (d.type === 'vote') {
+      if (s.phase !== 'over' || !s.votes) return { error: 'Głosować można po zakończonej rundzie.' };
+      if (!M.maps[d.map]) return { error: 'Nie ma takiej mapy.' };
+      s.votes[me] = d.map; s.voteDirty = true; return s;
+    }
     if (s.phase !== 'play') return s;
     if (d.type === 'in') {
       let dx = +d.dx, dy = +d.dy; const aim = +d.aim;
@@ -306,6 +320,13 @@ module.exports = {
 
   // zwraca true, gdy stan się zmienił i trzeba go wysłać
   step(s, dt) {
+    if (s.phase === 'over') { // po wygranej: głosowanie na następną mapę, potem nowa runda
+      if (s.votes && (s.votes.every(v => v != null) || Date.now() >= s.voteEnd)) {
+        const fresh = nextRound(s); Object.keys(s).forEach(k => delete s[k]); Object.assign(s, fresh); return true;
+      }
+      if (s.voteDirty) { s.voteDirty = false; return true; }
+      return false;
+    }
     if (s.phase !== 'play') return false;
     const now = Date.now();
     if (now < s.startAt) return true; // odliczanie do startu
@@ -340,11 +361,12 @@ module.exports = {
     });
 
     // --- nowe przedmioty ---
-    if (now >= s.nextItemAt) { s.nextItemAt = now + ITEM_EVERY; if (s.items.length < MAX_ITEMS) spawnItem(s); }
+    if (now >= s.nextItemAt) { s.nextItemAt = now + (s.mp.itemEvery || ITEM_EVERY); if (s.items.length < (s.mp.itemMax || MAX_ITEMS)) spawnItem(s); }
 
     // --- wydarzenia co 30 s, boss, meteory ---
     if (s.events && now >= s.nextEventAt) { s.nextEventAt = now + EVENT_EVERY; startEvent(s, now); }
-    bossStep(s, now, dt); hazardStep(s, now);
+    try { bossStep(s, now, dt); } catch (e) { console.error('Błąd bossa', e); s.boss = null; }
+    hazardStep(s, now);
     if (s.phase !== 'play') return true;
 
     // --- pociski (sprawdzamy cały odcinek ruchu, żeby szybki pocisk nie przeleciał przez gracza) ---
@@ -367,7 +389,7 @@ module.exports = {
         b.dead = true; continue;
       }
       b.x = nx; b.y = ny; b.left -= Math.hypot(b.vx, b.vy) * dt;
-      if (b.left <= 0 || nx < 0 || ny < 0 || nx > W || ny > H) { if (b.w === 'rocket') explode(s, b, clamp(nx, 0, W), clamp(ny, 0, H), now); b.dead = true; }
+      if (b.left <= 0 || nx < 0 || ny < 0 || nx > s.mp.W || ny > s.mp.H) { if (b.w === 'rocket') explode(s, b, clamp(nx, 0, s.mp.W), clamp(ny, 0, s.mp.H), now); b.dead = true; }
     }
     s.bullets = s.bullets.filter(b => !b.dead);
     s.fx = s.fx.filter(f => now - f.t < 700);
@@ -385,6 +407,7 @@ module.exports = {
       banner: s.banner && s.banner.until > now ? { text: s.banner.text, sub: s.banner.sub, ms: s.banner.until - now } : null,
       buffs: [s.frenzyUntil > now && { k: 'frenzy', ms: s.frenzyUntil - now }, s.hasteUntil > now && { k: 'haste', ms: s.hasteUntil - now }].filter(Boolean),
       goMs: Math.max(0, s.startAt - now),
+      vote: s.phase === 'over' && s.votes ? { votes: s.votes, ms: Math.max(0, s.voteEnd - now), cur: s.map } : null,
       players: s.players.map((p, j) => {
         const shown = !hideOthers || j === me || (s.team && s.team[j] === s.team[me]) || vis(p.x, p.y) || p.dead;
         if (!shown) return { hidden: true, dead: false, kills: p.kills, deaths: p.deaths, lv: p.lv };
@@ -405,12 +428,12 @@ module.exports = {
     };
   },
 
-  rematch(s) { return s.phase === 'over' ? create(s.names, s.wins, s.round + 1, s.opts) : s; },
+  rematch(s) { return s.phase === 'over' ? nextRound(s) : s; },
 
   // ktoś wyszedł w trakcie gry: usuwamy go i gramy dalej, jeśli zostało ≥2 graczy
   onLeave(s, idx) {
     if (s.team) return null; // 2v2 bez kompletu graczy = powrót do poczekalni
-    ['names', 'wins', 'players', 'inputs'].forEach(k => s[k].splice(idx, 1));
+    ['names', 'wins', 'players', 'inputs', 'votes'].forEach(k => { if (s[k]) s[k].splice(idx, 1); });
     if (s.boss) s.boss.dmg.splice(idx, 1);
     if (s.players.length < 2) return null;
     const re = o => (o == null || o === idx ? null : o > idx ? o - 1 : o);
