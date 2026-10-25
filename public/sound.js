@@ -47,6 +47,11 @@
     boom(o) { noise(0.7, 0.7 * o.vol, 420); tone('sine', 110, 30, 0.6, 0.6 * o.vol); },
     pick(o) { tone('triangle', 660, 660, 0.07, 0.25 * o.vol); tone('triangle', 990, 990, 0.1, 0.25 * o.vol, 0.06); },
     win(o) { [523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, f, 0.2, 0.28 * o.vol, i * 0.11)); },
+    // ---- Paczki kart ----
+    cflip(o) { noise(0.07, 0.22 * o.vol, 3000, 'highpass'); tone('triangle', 500, 800, 0.08, 0.14 * o.vol); },                                   // odkrycie zwykłej karty
+    crare(o) { noise(0.07, 0.2 * o.vol, 3000, 'highpass'); [660, 880, 1100].forEach((f, i) => tone('triangle', f, f, 0.14, 0.22 * o.vol, i * 0.08)); },  // rzadka
+    cepic(o) { noise(0.1, 0.25 * o.vol, 2500, 'highpass'); [523, 659, 784, 1046].forEach((f, i) => tone('square', f, f, 0.16, 0.18 * o.vol, i * 0.08)); tone('sine', 1568, 1568, 0.5, 0.15 * o.vol, 0.3); }, // Mega
+    clegend(o) { noise(0.25, 0.4 * o.vol, 600); [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone('triangle', f, f, 0.26, 0.26 * o.vol, i * 0.09)); tone('sine', 2093, 2093, 0.8, 0.18 * o.vol, 0.55); }, // Gigantamax
     // ---- Statki ----
     cannon(o) { noise(0.35, 0.6 * o.vol, 520); tone('sine', 150, 38, 0.32, 0.55 * o.vol); noise(0.12, 0.3 * o.vol, 2400, 'highpass'); },          // wystrzał z armaty
     whistle(o) { tone('sine', 1500, 520, 0.38, 0.1 * o.vol); },                                                                                  // pocisk w locie

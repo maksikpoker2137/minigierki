@@ -12,6 +12,12 @@
 3. W `server.js` dopisz grę do obiektu `games`, w `public/index.html` dodaj `<script>` z plikiem.
 Pokoje, nicki, kody, poczekalnia i wyniki działają dla wszystkich gier automatycznie.
 
+## Paczki kart Pokémon
+2–6 graczy. W każdej rundzie każdy otwiera własną paczkę 5 kart (klikasz kartę albo „Odkryj wszystkie”). Punkty zależą od rzadkości: zwykła 1, niezwykła 2, rzadka 4, **Mega 8**, **Gigantamax 15**; karta **holo ✨** (12% szans) daje ×2. Ostatnie miejsce w paczce jest „rzadkie” (szansa na Mega i Gigantamax). Gospodarz wybiera 3, 5 lub 10 paczek oraz tryb: **wybierasz typ paczki** (mieszana albo np. roślinna, ogień, woda, robak, trujący, elektryczna… – widać, ile kart z danej paczki już masz) lub same mieszane; wygrywa najwięcej punktów łącznie. Każdy zbiera też kolekcję (30 kart) – widać ją pod planszą.
+Karty to 72 Pokémony z tabeli (nr 1–60, z formami Mega i Gigantamax) – lista jest w `public/games/pokemon-data.js` (wspólna dla serwera i przeglądarki). Żeby dodać kolejne, dopisz wiersz do `RAW`: nr w Pokédeksie, nazwa, typy, min. poziom, rzadkość (`c`/`u`/`r`/`e`/`l`) i opcjonalnie nr obrazka z PokeAPI. Obrazki ładują się z internetu (PokeAPI na GitHubie); bez nich karta pokazuje ikonę typu. Zawartość zakrytych kart zna tylko serwer.
+
+**⚔️ Walka drużyn** (opcja „Tryb gry” w poczekalni): paczki otwiera się tak samo, ale zamiast punktów liczy się to, co wylosujesz. Po ostatniej paczce każdy układa **drużynę 3 kart** ze swojej kolekcji (kolejność = kolejność wchodzenia do walki; wybory są ukryte, dopóki wszyscy nie skończą). Potem drużyny walczą **każda z każdą** i wygrywa najwięcej wygranych pojedynków (przy remisie – więcej pozostałego życia). Statystyki karty (❤ życie, ⚔ atak, 🛡 obrona, ⚡ szybkość) wynikają z jej rzadkości i poziomu, karta holo ma o 15% więcej. W pojedynku szybsza karta bije pierwsza, każda używa skuteczniejszego ze swoich typów, a tabela przewag (np. ogień bije roślinę, woda ogień, elektryczność wodę, ziemia nie dosięga latających) jest w `public/games/pokemon-data.js` (`CHART`). Wyniki liczy serwer, przeglądarka odtwarza przebieg; wyniki turnieju pokazują się po obejrzeniu pojedynków (albo przyciskiem „Pokaż wyniki”).
+
 ## Wordle (wyścig)
 Wszyscy w pokoju zgadują to samo 5-literowe słowo (6 prób, 5 rund). Kto pierwszy je odgadnie, wygrywa rundę i runda się kończy. Rywale widzą tylko kolory Twoich prób, nie litery.
 Lista haseł jest w `games/wordle.js`. Domyślnie wolno wpisać dowolne 5 liter; jeśli położysz obok plik `games/wordle-dict.txt` (jedno słowo na linię), próby spoza słownika będą odrzucane.
