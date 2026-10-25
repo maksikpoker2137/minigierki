@@ -5,7 +5,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 // ➜ Nowa gra = nowy plik w /games + jedna linijka tutaj.
-const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman'), charades: require('./games/charades'), checkers: require('./games/checkers'), panstwa: require('./games/panstwa'), battleship: require('./games/battleship'), memory: require('./games/memory'), typing: require('./games/typing'), pong: require('./games/pong'), wordle: require('./games/wordle'), uno: require('./games/uno'), chess: require('./games/chess'), arena: require('./games/arena'), packs: require('./games/packs') };
+const games = { tictactoe: require('./games/tictactoe'), hangman: require('./games/hangman'), charades: require('./games/charades'), checkers: require('./games/checkers'), panstwa: require('./games/panstwa'), battleship: require('./games/battleship'), memory: require('./games/memory'), typing: require('./games/typing'), pong: require('./games/pong'), wordle: require('./games/wordle'), uno: require('./games/uno'), chess: require('./games/chess'), arena: require('./games/arena') };
 
 const app = express();
 const server = http.createServer(app);
